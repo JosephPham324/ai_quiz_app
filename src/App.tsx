@@ -1,24 +1,24 @@
-import { useState, useEffect } from 'react';
-import { Settings, BookOpen, Loader2 } from 'lucide-react';
-import SettingsModal from './components/SettingsModal';
-import FileUploader from './components/FileUploader';
-import QuestionBankViewer from './components/QuestionBankViewer';
-import QuizUI from './components/QuizUI';
-import type { Question } from './types';
-import { generateQuestionsChunk } from './services/ai';
+import { useState, useEffect } from "react";
+import { Settings, BookOpen, Loader2 } from "lucide-react";
+import SettingsModal from "./components/SettingsModal";
+import FileUploader from "./components/FileUploader";
+import QuestionBankViewer from "./components/QuestionBankViewer";
+import QuizUI from "./components/QuizUI";
+import type { Question } from "./types";
+import { generateQuestionsChunk } from "./services/ai";
 
 function App() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [apiKey, setApiKey] = useState('');
-  
+  const [apiKey, setApiKey] = useState("");
+
   const [questions, setQuestions] = useState<Question[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationProgress, setGenerationProgress] = useState(0);
-  
+
   const [quizMode, setQuizMode] = useState(false);
 
   useEffect(() => {
-    const key = localStorage.getItem('openai_api_key');
+    const key = localStorage.getItem("openai_api_key");
     if (key) {
       setApiKey(key);
     } else {
@@ -28,7 +28,7 @@ function App() {
 
   const handleSaveApiKey = (key: string) => {
     setApiKey(key);
-    localStorage.setItem('openai_api_key', key);
+    localStorage.setItem("openai_api_key", key);
     setIsSettingsOpen(false);
   };
 
@@ -37,7 +37,7 @@ function App() {
       setIsSettingsOpen(true);
       return;
     }
-    
+
     setIsGenerating(true);
     setGenerationProgress(0);
 
@@ -53,14 +53,16 @@ function App() {
         const chunk = chunks[i];
         try {
           const generated = await generateQuestionsChunk(chunk, apiKey);
-          newQuestions.push(...generated.map(q => ({
-            ...q,
-            id: Math.random().toString(36).substr(2, 9)
-          })));
+          newQuestions.push(
+            ...generated.map((q) => ({
+              ...q,
+              id: Math.random().toString(36).substr(2, 9),
+            })),
+          );
           setQuestions([...questions, ...newQuestions]);
           setGenerationProgress(Math.round(((i + 1) / chunks.length) * 100));
         } catch (err) {
-          console.error('Failed to generate for chunk', i, err);
+          console.error("Failed to generate for chunk", i, err);
         }
       }
     } finally {
@@ -71,11 +73,7 @@ function App() {
   if (quizMode) {
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col pt-12 px-4 sm:px-6 lg:px-8">
-        <QuizUI 
-          questions={questions} 
-          apiKey={apiKey}
-          onExit={() => setQuizMode(false)}
-        />
+        <QuizUI questions={questions} apiKey={apiKey} onExit={() => setQuizMode(false)} />
       </div>
     );
   }
@@ -88,7 +86,7 @@ function App() {
             <BookOpen className="w-6 h-6 text-indigo-600" />
             <h1 className="text-xl font-bold text-gray-900 tracking-tight">AI Quiz Generator</h1>
           </div>
-          <button 
+          <button
             onClick={() => setIsSettingsOpen(true)}
             className="p-2 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors"
             title="Settings"
@@ -106,7 +104,8 @@ function App() {
             </div>
             <h2 className="text-2xl font-semibold text-gray-900 mb-3">Welcome to AI Quiz Generator</h2>
             <p className="text-gray-500 mb-8 max-w-md mx-auto">
-              To get started, please configure your OpenAI API key. This key is stored securely in your browser and used to generate intelligent questions.
+              To get started, please configure your OpenAI API key. This key is stored securely in your browser and used to generate intelligent
+              questions.
             </p>
             <button
               onClick={() => setIsSettingsOpen(true)}
@@ -119,11 +118,9 @@ function App() {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
             <div className="lg:col-span-5 space-y-6">
               <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                  1. Upload Knowledge
-                </h2>
+                <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">1. Upload Knowledge</h2>
                 <FileUploader onContentExtracted={handleContentExtracted} />
-                
+
                 {isGenerating && (
                   <div className="mt-6 p-4 bg-indigo-50 rounded-lg border border-indigo-100">
                     <div className="flex items-center gap-3 text-indigo-700 font-medium mb-2">
@@ -140,23 +137,22 @@ function App() {
             </div>
 
             <div className="lg:col-span-7">
-              <QuestionBankViewer 
+              <QuestionBankViewer
                 questions={questions}
                 onImported={(imported) => setQuestions([...questions, ...imported])}
                 onStartQuiz={() => setQuizMode(true)}
+                onClear={() => setQuestions([])}
+                onShuffle={() => {
+                  const shuffled = [...questions].sort(() => Math.random() - 0.5);
+                  setQuestions(shuffled);
+                }}
               />
             </div>
           </div>
         )}
       </main>
 
-      {isSettingsOpen && (
-        <SettingsModal 
-          currentKey={apiKey}
-          onSave={handleSaveApiKey}
-          onClose={() => setIsSettingsOpen(false)}
-        />
-      )}
+      {isSettingsOpen && <SettingsModal currentKey={apiKey} onSave={handleSaveApiKey} onClose={() => setIsSettingsOpen(false)} />}
     </div>
   );
 }

@@ -1,35 +1,39 @@
-import React, { useRef } from 'react';
-import { Download, Upload, List } from 'lucide-react';
-import Papa from 'papaparse';
-import type { Question } from '../types';
+import React, { useRef } from "react";
+import { Download, Upload, List, Trash2, Shuffle } from "lucide-react";
+import Papa from "papaparse";
+import type { Question } from "../types";
 
 interface QuestionBankViewerProps {
   questions: Question[];
   onImported: (questions: Question[]) => void;
   onStartQuiz: () => void;
+  onClear: () => void;
+  onShuffle: () => void;
 }
 
-export default function QuestionBankViewer({ questions, onImported, onStartQuiz }: QuestionBankViewerProps) {
+export default function QuestionBankViewer({ questions, onImported, onStartQuiz, onClear, onShuffle }: QuestionBankViewerProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleExportCSV = () => {
     if (questions.length === 0) return;
-    const csv = Papa.unparse(questions.map(q => ({
-      id: q.id,
-      text: q.text,
-      type: q.type,
-      optionA: q.options?.[0] || '',
-      optionB: q.options?.[1] || '',
-      optionC: q.options?.[2] || '',
-      optionD: q.options?.[3] || '',
-      correctOptionIndex: q.correctOptionIndex,
-      writtenAnswerReference: q.writtenAnswerReference || ''
-    })));
+    const csv = Papa.unparse(
+      questions.map((q) => ({
+        id: q.id,
+        text: q.text,
+        type: q.type,
+        optionA: q.options?.[0] || "",
+        optionB: q.options?.[1] || "",
+        optionC: q.options?.[2] || "",
+        optionD: q.options?.[3] || "",
+        correctOptionIndex: q.correctOptionIndex,
+        writtenAnswerReference: q.writtenAnswerReference || "",
+      })),
+    );
 
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
-    link.download = 'question_bank.csv';
+    link.download = "question_bank.csv";
     link.click();
   };
 
@@ -44,18 +48,18 @@ export default function QuestionBankViewer({ questions, onImported, onStartQuiz 
         const importedQuestions: Question[] = results.data.map((row: any) => ({
           id: row.id || Math.random().toString(36).substr(2, 9),
           text: row.text,
-          type: row.type || 'multiple-choice',
+          type: row.type || "multiple-choice",
           options: [row.optionA, row.optionB, row.optionC, row.optionD].filter(Boolean),
           correctOptionIndex: parseInt(row.correctOptionIndex, 10),
-          writtenAnswerReference: row.writtenAnswerReference
+          writtenAnswerReference: row.writtenAnswerReference,
         }));
         onImported(importedQuestions);
-      }
+      },
     });
-    
+
     // Reset file input
     if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+      fileInputRef.current.value = "";
     }
   };
 
@@ -67,13 +71,7 @@ export default function QuestionBankViewer({ questions, onImported, onStartQuiz 
           Question Bank ({questions.length})
         </h2>
         <div className="flex items-center gap-2">
-          <input 
-            type="file" 
-            accept=".csv" 
-            ref={fileInputRef}
-            onChange={handleImportCSV} 
-            className="hidden" 
-          />
+          <input type="file" accept=".csv" ref={fileInputRef} onChange={handleImportCSV} className="hidden" />
           <button
             onClick={() => fileInputRef.current?.click()}
             className="p-2 text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
@@ -89,22 +87,40 @@ export default function QuestionBankViewer({ questions, onImported, onStartQuiz 
           >
             <Download className="w-4 h-4" />
           </button>
+          <button
+            onClick={onShuffle}
+            disabled={questions.length === 0}
+            className="p-2 text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 rounded transition-colors disabled:opacity-50"
+            title="Shuffle Questions"
+          >
+            <Shuffle className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => {
+              if (window.confirm("Are you sure you want to clear the question bank?")) {
+                onClear();
+              }
+            }}
+            disabled={questions.length === 0}
+            className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded transition-colors disabled:opacity-50"
+            title="Clear Question Bank"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
         </div>
       </div>
 
       {questions.length === 0 ? (
-        <div className="text-center py-8 text-gray-500">
-          No questions generated yet. Upload a knowledge file to begin.
-        </div>
+        <div className="text-center py-8 text-gray-500">No questions generated yet. Upload a knowledge file to begin.</div>
       ) : (
         <div className="space-y-4">
           <div className="max-h-96 overflow-y-auto space-y-3 pr-2">
             {questions.map((q, idx) => (
               <div key={q.id} className="p-3 bg-gray-50 border border-gray-100 rounded-lg text-sm">
-                <p className="font-medium text-gray-900 mb-2">{idx + 1}. {q.text}</p>
-                <div className="text-gray-500 line-clamp-2">
-                  {q.type === 'multiple-choice' ? q.options?.join(' • ') : q.writtenAnswerReference}
-                </div>
+                <p className="font-medium text-gray-900 mb-2">
+                  {idx + 1}. {q.text}
+                </p>
+                <div className="text-gray-500 line-clamp-2">{q.type === "multiple-choice" ? q.options?.join(" • ") : q.writtenAnswerReference}</div>
               </div>
             ))}
           </div>
