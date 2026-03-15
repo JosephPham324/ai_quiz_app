@@ -1,24 +1,18 @@
 name: Deploy Quiz App to GitHub Pages
 
 on:
-  # Runs on pushes targeting the default branch
   push:
     branches: ["main", "master"]
-    # Only trigger when files in quiz_app change
     paths:
-      - "./**"
+      - "**"
       - ".github/workflows/deploy-quiz-app.yml"
-
-  # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
-# Sets the GITHUB_TOKEN permissions to allow deployment to GitHub Pages
 permissions:
   contents: read
   pages: write
   id-token: write
 
-# Allow one concurrent deployment
 concurrency:
   group: "pages"
   cancel-in-progress: true
@@ -38,23 +32,21 @@ jobs:
         with:
           node-version: 20
           cache: "npm"
-          cache-dependency-path: ./package-lock.json
+          cache-dependency-path: "package-lock.json"
 
       - name: Install dependencies
-        working-directory: ./
         run: npm ci
-
-      - name: Build
-        working-directory: ./
-        run: npm run build
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
 
+      - name: Build
+        run: npm run build
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: "./dist"
+          path: "dist"
 
       - name: Deploy to GitHub Pages
         id: deployment
