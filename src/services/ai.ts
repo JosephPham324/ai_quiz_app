@@ -18,6 +18,7 @@ Each question MUST follow this JSON structure:
 
 Ensure you generate 3-5 high-quality questions per chunk of context.
 Return ONLY the JSON object, without any markdown formatting.
+The question and answer language must match the language of the input text. If the text is in English, generate questions in English; if it's in Spanish, generate questions in Spanish, etc.
 `;
 
 export async function generateQuestionsChunk(text: string, apiKey: string): Promise<Question[]> {
