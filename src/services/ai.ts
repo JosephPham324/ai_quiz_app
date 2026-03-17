@@ -29,7 +29,7 @@ export async function generateQuestionsChunk(text: string, apiKey: string): Prom
       Authorization: `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
-      model: "gpt-4o-mini",
+      model: "gpt-4.1-nano",
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         { role: "user", content: `Generate questions from the following text:\n\n${text}` },
@@ -62,12 +62,7 @@ export async function generateQuestionsChunk(text: string, apiKey: string): Prom
   }
 }
 
-export async function gradeWrittenAnswer(
-  question: string,
-  reference: string,
-  userAnswer: string,
-  apiKey: string,
-): Promise<EvaluationResult> {
+export async function gradeWrittenAnswer(question: string, reference: string, userAnswer: string, apiKey: string): Promise<EvaluationResult> {
   const response = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -75,7 +70,7 @@ export async function gradeWrittenAnswer(
       Authorization: `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
-      model: "gpt-4o-mini",
+      model: "gpt-4.1-nano",
       messages: [
         {
           role: "system",
@@ -114,7 +109,7 @@ export async function evaluatePracticalExample(
       Authorization: `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
-      model: "gpt-4o-mini",
+      model: "gpt-4.1-nano",
       messages: [
         {
           role: "system",
@@ -140,11 +135,7 @@ export async function evaluatePracticalExample(
   return JSON.parse(content);
 }
 
-export async function generateAIExample(
-  question: string,
-  referenceAnswer: string,
-  apiKey: string,
-): Promise<{ example: string }> {
+export async function generateAIExample(question: string, referenceAnswer: string, apiKey: string): Promise<{ example: string }> {
   const response = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -152,12 +143,12 @@ export async function generateAIExample(
       Authorization: `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
-      model: "gpt-4o-mini",
+      model: "gpt-4.1-nano",
       messages: [
         {
           role: "system",
           content:
-            "You are an expert educator. Provide a clear, concise, and highly relevant practical example that illustrates the concept in the provided question and answer. Use plain text only.",
+            "You are an expert educator. Provide a clear, concise, and highly relevant practical example that illustrates the concept in the provided question and answer. Use plain text or code snippets. Prioritize code examples if the question is technical. Ensure the example directly applies the key points from the reference answer.",
         },
         {
           role: "user",

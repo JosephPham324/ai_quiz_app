@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { Question, EvaluationResult } from "../types";
 import { gradeWrittenAnswer, evaluatePracticalExample, generateAIExample } from "../services/ai";
 import { BrainCircuit, Check, X, ArrowRight, RotateCcw, Lightbulb, Sparkles } from "lucide-react";
+import MarkdownContent from "./MarkdownContent";
 
 interface QuizUIProps {
   questions: Question[];
@@ -337,7 +338,9 @@ export default function QuizUI({ questions, apiKey, onExit }: QuizUIProps) {
                 <Sparkles className="w-4 h-4 text-purple-600" />
                 <span className="font-semibold text-purple-900">AI Learning Example</span>
               </div>
-              <p className="text-gray-700 text-sm italic">{aiExample}</p>
+              <div className="bg-white/50 p-4 rounded-md border border-purple-100 shadow-sm">
+                <MarkdownContent content={aiExample} />
+              </div>
             </div>
           )}
         </div>
