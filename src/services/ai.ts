@@ -135,7 +135,12 @@ export async function evaluatePracticalExample(
   return JSON.parse(content);
 }
 
-export async function generateAIExample(question: string, referenceAnswer: string, apiKey: string): Promise<{ example: string }> {
+export async function generateAIExample(
+  question: string,
+  referenceAnswer: string,
+  apiKey: string,
+  programmingLanguage?: string,
+): Promise<{ example: string }> {
   const response = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -147,8 +152,7 @@ export async function generateAIExample(question: string, referenceAnswer: strin
       messages: [
         {
           role: "system",
-          content:
-            "You are an expert educator. Provide a clear, concise, and highly relevant practical example that illustrates the concept in the provided question and answer. Use plain text or code snippets. Prioritize code examples if the question is technical. Ensure the example directly applies the key points from the reference answer.",
+          content: `You are an expert educator. Provide a clear, concise, and highly relevant practical example that illustrates the concept in the provided question and answer. Use plain text or code snippets. ${programmingLanguage ? `The code examples MUST be written in ${programmingLanguage}.` : "Prioritize code examples if the question is technical."} Ensure the example directly applies the key points from the reference answer.`,
         },
         {
           role: "user",

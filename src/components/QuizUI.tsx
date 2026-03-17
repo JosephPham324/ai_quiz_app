@@ -29,6 +29,7 @@ export default function QuizUI({ questions, apiKey, onExit }: QuizUIProps) {
 
   const [aiExample, setAiExample] = useState<string | null>(null);
   const [isGeneratingAIExample, setIsGeneratingAIExample] = useState(false);
+  const [preferredLanguage, setPreferredLanguage] = useState("JavaScript");
 
   const [score, setScore] = useState(0);
   const [isFinished, setIsFinished] = useState(false);
@@ -108,7 +109,7 @@ export default function QuizUI({ questions, apiKey, onExit }: QuizUIProps) {
         currentQuestion.type === "multiple-choice"
           ? currentQuestion.options?.[currentQuestion.correctOptionIndex!] || ""
           : currentQuestion.writtenAnswerReference || "";
-      const result = await generateAIExample(currentQuestion.text, refAnswer, apiKey);
+      const result = await generateAIExample(currentQuestion.text, refAnswer, apiKey, preferredLanguage);
       setAiExample(result.example);
     } catch (err) {
       setAiExample("Failed to generate an AI example. Please try again.");
@@ -169,9 +170,30 @@ export default function QuizUI({ questions, apiKey, onExit }: QuizUIProps) {
         <span className="text-sm font-medium text-gray-500 uppercase tracking-wider">
           Question {currentIndex + 1} of {questions.length}
         </span>
-        <button onClick={onExit} className="text-sm text-gray-400 hover:text-gray-600">
-          Cancel
-        </button>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold text-gray-500 uppercase">AI Example Language:</span>
+            <select
+              value={preferredLanguage}
+              onChange={(e) => setPreferredLanguage(e.target.value)}
+              className="bg-gray-50 border border-gray-200 rounded px-2 py-1 text-xs font-medium text-gray-700 outline-none focus:ring-1 focus:ring-indigo-500"
+            >
+              <option value="JavaScript">JavaScript</option>
+              <option value="TypeScript">TypeScript</option>
+              <option value="Python">Python</option>
+              <option value="Java">Java</option>
+              <option value="C++">C++</option>
+              <option value="C#">C#</option>
+              <option value="Go">Go</option>
+              <option value="Rust">Rust</option>
+              <option value="Swift">Swift</option>
+              <option value="Kotlin">Kotlin</option>
+            </select>
+          </div>
+          <button onClick={onExit} className="text-sm text-gray-400 hover:text-gray-600">
+            Cancel
+          </button>
+        </div>
       </div>
 
       <h2 className="text-xl font-semibold text-gray-900 mb-6">{currentQuestion.text}</h2>
