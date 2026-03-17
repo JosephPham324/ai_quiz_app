@@ -1,4 +1,4 @@
-import type { Question } from "../types";
+import type { Question, EvaluationResult } from "../types";
 
 const SYSTEM_PROMPT = `
 You are an expert quiz generator. Your task is to analyze the provided text and strictly output ONLY a valid JSON object with a "questions" array.
@@ -29,7 +29,7 @@ export async function generateQuestionsChunk(text: string, apiKey: string): Prom
       Authorization: `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
-      model: "gpt-4o-mini", // Cost efficient model
+      model: "gpt-4o-mini",
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         { role: "user", content: `Generate questions from the following text:\n\n${text}` },
@@ -67,7 +67,7 @@ export async function gradeWrittenAnswer(
   reference: string,
   userAnswer: string,
   apiKey: string,
-): Promise<{ score: number; feedback: string }> {
+): Promise<EvaluationResult> {
   const response = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -75,7 +75,7 @@ export async function gradeWrittenAnswer(
       Authorization: `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
-      model: "gpt-4.1-nano",
+      model: "gpt-4o-mini",
       messages: [
         {
           role: "system",
@@ -99,4 +99,80 @@ export async function gradeWrittenAnswer(
   const data = await response.json();
   const content = data.choices[0].message.content;
   return JSON.parse(content);
+}
+
+export async function evaluatePracticalExample(
+  question: string,
+  referenceAnswer: string,
+  userExample: string,
+  apiKey: string,
+): Promise<EvaluationResult> {
+  const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model: "gpt-4o-mini",
+      messages: [
+        {
+          role: "system",
+          content:
+            'You are an expert at evaluating practical applications of theoretical concepts. You will be provided with a Question, its Reference Answer, and a Practical Example provided by a student. Evaluate if the student\'s example correctly applies the concepts from the question and reference answer. Grade from 0 to 100. Output strict JSON: { "score": number, "feedback": "Brief feedback" } without markdown tags.',
+        },
+        {
+          role: "user",
+          content: `Question: ${question}\n\nReference Answer: ${referenceAnswer}\n\nStudent's Practical Example: ${userExample}`,
+        },
+      ],
+      temperature: 0.2,
+      response_format: { type: "json_object" },
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to evaluate practical example`);
+  }
+
+  const data = await response.json();
+  const content = data.choices[0].message.content;
+  return JSON.parse(content);
+}
+
+export async function generateAIExample(
+  question: string,
+  referenceAnswer: string,
+  apiKey: string,
+): Promise<{ example: string }> {
+  const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model: "gpt-4o-mini",
+      messages: [
+        {
+          role: "system",
+          content:
+            "You are an expert educator. Provide a clear, concise, and highly relevant practical example that illustrates the concept in the provided question and answer. Use plain text only.",
+        },
+        {
+          role: "user",
+          content: `Question: ${question}\n\nReference Answer: ${referenceAnswer}`,
+        },
+      ],
+      temperature: 0.7,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to generate example`);
+  }
+
+  const data = await response.json();
+  const content = data.choices[0].message.content;
+  return { example: content || "No example generated." };
 }

@@ -1,7 +1,7 @@
 import { useState } from "react";
-import type { Question } from "../types";
-import { gradeWrittenAnswer } from "../services/ai";
-import { BrainCircuit, Check, X, ArrowRight, RotateCcw } from "lucide-react";
+import type { Question, EvaluationResult } from "../types";
+import { gradeWrittenAnswer, evaluatePracticalExample, generateAIExample } from "../services/ai";
+import { BrainCircuit, Check, X, ArrowRight, RotateCcw, Lightbulb, Sparkles } from "lucide-react";
 
 interface QuizUIProps {
   questions: Question[];
@@ -18,22 +18,44 @@ export default function QuizUI({ questions, apiKey, onExit }: QuizUIProps) {
   const [writtenInput, setWrittenInput] = useState("");
 
   const [isSubmitted, setIsSubmitted] = useState(false);
-  const [gradingResult, setGradingResult] = useState<{ score: number; feedback: string } | null>(null);
+  const [gradingResult, setGradingResult] = useState<EvaluationResult | null>(null);
   const [isGrading, setIsGrading] = useState(false);
+
+  const [isPracticalEnabled, setIsPracticalEnabled] = useState(false);
+  const [practicalInput, setPracticalInput] = useState("");
+  const [exampleResult, setExampleResult] = useState<EvaluationResult | null>(null);
+  const [isEvaluatingExample, setIsEvaluatingExample] = useState(false);
+
+  const [aiExample, setAiExample] = useState<string | null>(null);
+  const [isGeneratingAIExample, setIsGeneratingAIExample] = useState(false);
 
   const [score, setScore] = useState(0);
   const [isFinished, setIsFinished] = useState(false);
 
   const currentQuestion = questions[currentIndex];
 
-  const handleSubmitOptions = () => {
+  const handleSubmitOptions = async () => {
     if (selectedOption === null) return;
     setIsSubmitted(true);
+
     if (selectedOption === currentQuestion.correctOptionIndex) {
       setScore((s) => s + 1);
       setGradingResult({ score: 100, feedback: "Correct!" });
     } else {
       setGradingResult({ score: 0, feedback: "Incorrect." });
+    }
+
+    if (isPracticalEnabled && practicalInput.trim()) {
+      setIsEvaluatingExample(true);
+      try {
+        const refAnswer = currentQuestion.options?.[currentQuestion.correctOptionIndex!] || "";
+        const result = await evaluatePracticalExample(currentQuestion.text, refAnswer, practicalInput, apiKey);
+        setExampleResult(result);
+      } catch (err) {
+        setExampleResult({ score: 0, feedback: "Failed to evaluate example." });
+      } finally {
+        setIsEvaluatingExample(false);
+      }
     }
   };
 
@@ -41,6 +63,7 @@ export default function QuizUI({ questions, apiKey, onExit }: QuizUIProps) {
     if (!writtenInput.trim()) return;
     setIsSubmitted(true);
 
+    // Initial grading
     if (gradingMode === "strict") {
       const isCorrect = writtenInput.trim().toLowerCase() === (currentQuestion.writtenAnswerReference || "").trim().toLowerCase();
       if (isCorrect) setScore((s) => s + 1);
@@ -49,13 +72,47 @@ export default function QuizUI({ questions, apiKey, onExit }: QuizUIProps) {
       setIsGrading(true);
       try {
         const result = await gradeWrittenAnswer(currentQuestion.text, currentQuestion.writtenAnswerReference || "", writtenInput, apiKey);
-        if (result.score >= 80) setScore((s) => s + 1); // threshold
+        if (result.score >= 80) setScore((s) => s + 1);
         setGradingResult(result);
       } catch (err) {
-        setGradingResult({ score: 0, feedback: "Failed to grade with AI. Please check your API key." });
+        setGradingResult({ score: 0, feedback: "Failed to grade with AI." });
       } finally {
         setIsGrading(false);
       }
+    }
+
+    // Practical example evaluation
+    if (isPracticalEnabled && practicalInput.trim()) {
+      setIsEvaluatingExample(true);
+      try {
+        const result = await evaluatePracticalExample(
+          currentQuestion.text,
+          currentQuestion.writtenAnswerReference || "",
+          practicalInput,
+          apiKey,
+        );
+        setExampleResult(result);
+      } catch (err) {
+        setExampleResult({ score: 0, feedback: "Failed to evaluate practical example." });
+      } finally {
+        setIsEvaluatingExample(false);
+      }
+    }
+  };
+
+  const handleGenerateAIExample = async () => {
+    setIsGeneratingAIExample(true);
+    try {
+      const refAnswer =
+        currentQuestion.type === "multiple-choice"
+          ? currentQuestion.options?.[currentQuestion.correctOptionIndex!] || ""
+          : currentQuestion.writtenAnswerReference || "";
+      const result = await generateAIExample(currentQuestion.text, refAnswer, apiKey);
+      setAiExample(result.example);
+    } catch (err) {
+      setAiExample("Failed to generate an AI example. Please try again.");
+    } finally {
+      setIsGeneratingAIExample(false);
     }
   };
 
@@ -73,6 +130,9 @@ export default function QuizUI({ questions, apiKey, onExit }: QuizUIProps) {
     setWrittenInput("");
     setIsSubmitted(false);
     setGradingResult(null);
+    setPracticalInput("");
+    setExampleResult(null);
+    setAiExample(null);
   };
 
   if (isFinished) {
@@ -115,21 +175,34 @@ export default function QuizUI({ questions, apiKey, onExit }: QuizUIProps) {
 
       <h2 className="text-xl font-semibold text-gray-900 mb-6">{currentQuestion.text}</h2>
 
-      <div className="flex gap-2 mb-6 bg-gray-50 p-1 rounded-lg w-fit">
-        <button
-          onClick={() => setAnswerMode("multiple-choice")}
-          disabled={isSubmitted}
-          className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${answerMode === "multiple-choice" ? "bg-white shadow text-gray-900" : "text-gray-500 hover:text-gray-700"}`}
-        >
-          Multiple Choice
-        </button>
-        <button
-          onClick={() => setAnswerMode("written")}
-          disabled={isSubmitted}
-          className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${answerMode === "written" ? "bg-white shadow text-gray-900" : "text-gray-500 hover:text-gray-700"}`}
-        >
-          Written Answer
-        </button>
+      <div className="flex flex-wrap items-center gap-4 mb-6">
+        <div className="flex gap-2 bg-gray-50 p-1 rounded-lg w-fit">
+          <button
+            onClick={() => setAnswerMode("multiple-choice")}
+            disabled={isSubmitted}
+            className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${answerMode === "multiple-choice" ? "bg-white shadow text-gray-900" : "text-gray-500 hover:text-gray-700"}`}
+          >
+            Multiple Choice
+          </button>
+          <button
+            onClick={() => setAnswerMode("written")}
+            disabled={isSubmitted}
+            className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${answerMode === "written" ? "bg-white shadow text-gray-900" : "text-gray-500 hover:text-gray-700"}`}
+          >
+            Written Answer
+          </button>
+        </div>
+
+        <label className="flex items-center gap-2 cursor-pointer ml-auto bg-amber-50 px-3 py-1.5 rounded-lg border border-amber-100">
+          <input
+            type="checkbox"
+            checked={isPracticalEnabled}
+            onChange={(e) => setIsPracticalEnabled(e.target.checked)}
+            disabled={isSubmitted}
+            className="w-4 h-4 rounded text-amber-600 focus:ring-amber-500 border-amber-300"
+          />
+          <span className="text-xs font-semibold text-amber-800 uppercase tracking-wide">Practical Example Mode</span>
+        </label>
       </div>
 
       <div className="min-h-[200px]">
@@ -183,34 +256,94 @@ export default function QuizUI({ questions, apiKey, onExit }: QuizUIProps) {
             />
           </div>
         )}
+
+        {isPracticalEnabled && (
+          <div className="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+            <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+              <Lightbulb className="w-4 h-4 text-amber-500" />
+              Practical Example (Optional)
+            </label>
+            <p className="text-xs text-gray-500 mb-3">Provide a real-world scenario where this concept is applied for extra AI feedback.</p>
+            <textarea
+              value={practicalInput}
+              onChange={(e) => setPracticalInput(e.target.value)}
+              disabled={isSubmitted || isEvaluatingExample}
+              className="w-full h-24 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 resize-none text-sm bg-white"
+              placeholder="Describe a practical example..."
+            />
+          </div>
+        )}
       </div>
 
-      {isGrading && (
-        <div className="mt-6 flex items-center justify-center gap-2 text-indigo-600">
-          <BrainCircuit className="w-5 h-5 animate-pulse" />
-          <span>AI is analyzing your answer...</span>
-        </div>
-      )}
-
-      {isSubmitted && gradingResult && !isGrading && (
-        <div
-          className={`mt-6 p-4 rounded-lg border ${gradingResult.score >= 80 ? "bg-green-50 border-green-200" : "bg-orange-50 border-orange-200"}`}
-        >
-          <div className="flex items-center gap-2 mb-2">
-            <span className="font-semibold">{gradingResult.score >= 80 ? "Good Job!" : "Needs Improvement"}</span>
-            <span className="text-sm bg-white px-2 py-0.5 rounded-full shadow-sm">Score: {gradingResult.score}/100</span>
-          </div>
-          <p className="text-gray-700 text-sm">{gradingResult.feedback}</p>
-          {answerMode === "written" && (
-            <div className="mt-3 pt-3 border-t border-black/10">
-              <p className="text-xs text-gray-500 font-medium uppercase mb-1">Reference Answer</p>
-              <p className="text-sm text-gray-800">{currentQuestion.writtenAnswerReference}</p>
+      {(isGrading || isEvaluatingExample || isGeneratingAIExample) && (
+        <div className="mt-6 flex flex-col gap-2">
+          {isGrading && (
+            <div className="flex items-center justify-center gap-2 text-indigo-600">
+              <BrainCircuit className="w-5 h-5 animate-pulse" />
+              <span>AI is analyzing your answer...</span>
+            </div>
+          )}
+          {isEvaluatingExample && (
+            <div className="flex items-center justify-center gap-2 text-amber-600">
+              <BrainCircuit className="w-5 h-5 animate-pulse" />
+              <span>AI is evaluating your practical example...</span>
+            </div>
+          )}
+          {isGeneratingAIExample && (
+            <div className="flex items-center justify-center gap-2 text-purple-600">
+              <Sparkles className="w-5 h-5 animate-spin" />
+              <span>AI is crafting a helpful example for you...</span>
             </div>
           )}
         </div>
       )}
 
-      <div className="mt-8 flex justify-end">
+      {isSubmitted && (gradingResult || exampleResult || aiExample) && !isGrading && !isEvaluatingExample && !isGeneratingAIExample && (
+        <div className="mt-6 space-y-4">
+          {gradingResult && (
+            <div
+              className={`p-4 rounded-lg border ${gradingResult.score >= 80 ? "bg-green-50 border-green-200" : "bg-orange-50 border-orange-200"}`}
+            >
+              <div className="flex items-center gap-2 mb-2">
+                <span className="font-semibold">{gradingResult.score >= 80 ? "Good Job!" : "Needs Improvement"}</span>
+                <span className="text-sm bg-white px-2 py-0.5 rounded-full shadow-sm ml-auto">Score: {gradingResult.score}/100</span>
+              </div>
+              <p className="text-gray-700 text-sm">{gradingResult.feedback}</p>
+              {answerMode === "written" && (
+                <div className="mt-3 pt-3 border-t border-black/10">
+                  <p className="text-xs text-gray-500 font-medium uppercase mb-1">Reference Answer</p>
+                  <p className="text-sm text-gray-800">{currentQuestion.writtenAnswerReference}</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {exampleResult && (
+            <div
+              className={`p-4 rounded-lg border ${exampleResult.score >= 80 ? "bg-amber-50 border-amber-200" : "bg-orange-50 border-orange-200"}`}
+            >
+              <div className="flex items-center gap-2 mb-2">
+                <Lightbulb className="w-4 h-4 text-amber-600" />
+                <span className="font-semibold text-amber-900">Practical Example Evaluation</span>
+                <span className="text-sm bg-white px-2 py-0.5 rounded-full shadow-sm ml-auto">Score: {exampleResult.score}/100</span>
+              </div>
+              <p className="text-gray-700 text-sm">{exampleResult.feedback}</p>
+            </div>
+          )}
+
+          {aiExample && (
+            <div className="p-4 rounded-lg border bg-purple-50 border-purple-200">
+              <div className="flex items-center gap-2 mb-2">
+                <Sparkles className="w-4 h-4 text-purple-600" />
+                <span className="font-semibold text-purple-900">AI Learning Example</span>
+              </div>
+              <p className="text-gray-700 text-sm italic">{aiExample}</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      <div className="mt-8 flex justify-end items-center gap-3">
         {!isSubmitted ? (
           <button
             onClick={answerMode === "multiple-choice" ? handleSubmitOptions : handleSubmitWritten}
@@ -220,25 +353,37 @@ export default function QuizUI({ questions, apiKey, onExit }: QuizUIProps) {
             Submit Answer
           </button>
         ) : (
-          <div className="flex items-center gap-3">
-            {gradingResult && gradingResult.score < 80 && (
+          <>
+            {!aiExample && !isGeneratingAIExample && (
               <button
-                onClick={() => {
-                  setIsSubmitted(false);
-                  setGradingResult(null);
-                }}
-                className="flex items-center gap-2 px-6 py-2.5 bg-white text-gray-900 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+                onClick={handleGenerateAIExample}
+                className="flex items-center gap-2 px-6 py-2.5 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors font-medium"
               >
-                <RotateCcw className="w-4 h-4" /> Try Again
+                <Sparkles className="w-4 h-4" /> Provide Example
               </button>
             )}
-            <button
-              onClick={handleNext}
-              className="flex items-center gap-2 px-6 py-2.5 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-medium"
-            >
-              {currentIndex < questions.length - 1 ? "Next Question" : "Finish Quiz"} <ArrowRight className="w-4 h-4" />
-            </button>
-          </div>
+            <div className="flex items-center gap-3">
+              {gradingResult && gradingResult.score < 80 && (
+                <button
+                  onClick={() => {
+                    setIsSubmitted(false);
+                    setGradingResult(null);
+                    setExampleResult(null);
+                    setAiExample(null);
+                  }}
+                  className="flex items-center gap-2 px-6 py-2.5 bg-white text-gray-900 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+                >
+                  <RotateCcw className="w-4 h-4" /> Try Again
+                </button>
+              )}
+              <button
+                onClick={handleNext}
+                className="flex items-center gap-2 px-6 py-2.5 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-medium"
+              >
+                {currentIndex < questions.length - 1 ? "Next Question" : "Finish Quiz"} <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
+          </>
         )}
       </div>
     </div>

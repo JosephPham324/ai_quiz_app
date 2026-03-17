@@ -7,6 +7,11 @@ export interface Question {
   writtenAnswerReference?: string;
 }
 
+export interface EvaluationResult {
+  score: number;
+  feedback: string;
+}
+
 export interface QuestionBank {
   id: string;
   title: string;
