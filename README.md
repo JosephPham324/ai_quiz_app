@@ -1,73 +1,54 @@
-# React + TypeScript + Vite
+# AI Quiz Generator 🧠✨
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A modern, AI-powered quiz application that transforms your study materials into interactive learning experiences. Upload knowledge files, generate intelligent questions, and strengthen your understanding with AI-evaluated practical examples.
 
-Currently, two official plugins are available:
+## 🚀 Key Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **Multi-Format Knowledge Upload**: Support for `.md`, `.txt`, and `.docx` files.
+- **Intelligent Question Generation**: Automatically generates high-quality multiple-choice and written questions using OpenAI's latest models.
+- **Advanced Grading Modes**: 
+  - **Strict Match**: For precise terminology and definitions.
+  - **AI Evaluator**: Uses GPT to understand context and nuance in written responses.
+- **Practical Application Learning**:
+  - **Practical Example Mode**: Input your own real-world scenarios to see how theory applies in practice.
+  - **AI-Generated Case Studies**: Click "Provide Example" to get a beautifully rendered markdown example (including code blocks) tailored to the question.
+- **Question Bank Management**:
+  - Export your generated questions to CSV.
+  - Import existing question banks.
+  - Shuffle and clear functionality for endless practice.
+- **Premium UI/UX**: Built with a sleek, responsive design featuring glassmorphism, smooth transitions, and rich typography.
 
-## React Compiler
+## 🛠️ Tech Stack
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- **Core**: [React 19](https://react.dev/), [Vite](https://vitejs.dev/)
+- **Language**: [TypeScript](https://www.typescriptlang.org/)
+- **Styling**: [Tailwind CSS v4](https://tailwindcss.com/) (with [Typography plugin](https://github.com/tailwindlabs/tailwindcss-typography))
+- **AI Integration**: [OpenAI API](https://openai.com/) (gpt-4.1-nano)
+- **Icons**: [Lucide React](https://lucide.dev/)
+- **Parsing Libraries**:
+  - [PapaParse](https://www.papaparse.com/) (CSV)
+  - [Mammoth](https://github.com/mwilliamson/mammoth.js) (DOCX)
+- **Markdown Support**: [react-markdown](https://github.com/remarkjs/react-markdown) & [remark-gfm](https://github.com/remarkjs/remark-gfm)
 
-## Expanding the ESLint configuration
+## 📺 Demo
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+*[Placeholder for Demo Video - You can insert your recorded demo video here or embed a YouTube link]*
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+> [!TIP]
+> You can try importing the `sample_questions.csv` included in the repository for a quick demo of the quiz interface!
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+## ⚙️ Setup
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+1. Clone the repository.
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+3. Run the development server:
+   ```bash
+   npm run dev
+   ```
+4. Open the app and configure your **OpenAI API Key** in the settings (stored locally).
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+---
+Developed with ❤️ by Joseph Pham
