@@ -18,3 +18,17 @@ export interface QuestionBank {
   questions: Question[];
   createdAt: number;
 }
+
+export type QuestionComplexity = 'brief' | 'elaborate' | 'practical';
+
+export interface ModelOption {
+  id: string;
+  name: string;
+  inputCost: string;   // per 1M tokens
+  outputCost: string;  // per 1M tokens
+}
+
+export interface GenerationOptions {
+  model: string;
+  complexity: QuestionComplexity;
+}

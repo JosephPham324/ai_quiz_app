@@ -1,11 +1,37 @@
 import { useState, useEffect } from "react";
-import { Settings, BookOpen, Loader2 } from "lucide-react";
+import { Settings, BookOpen, Loader2, ChevronDown } from "lucide-react";
 import SettingsModal from "./components/SettingsModal";
 import FileUploader from "./components/FileUploader";
 import QuestionBankViewer from "./components/QuestionBankViewer";
 import QuizUI from "./components/QuizUI";
-import type { Question } from "./types";
+import type { Question, QuestionComplexity, ModelOption } from "./types";
 import { generateQuestionsChunk } from "./services/ai";
+
+const MODEL_OPTIONS: ModelOption[] = [
+  { id: "gpt-4.1-nano", name: "GPT-4.1 Nano", inputCost: "$0.10", outputCost: "$0.40" },
+  { id: "gpt-4.1-mini", name: "GPT-4.1 Mini", inputCost: "$0.40", outputCost: "$1.60" },
+  { id: "gpt-4.1", name: "GPT-4.1", inputCost: "$2.00", outputCost: "$8.00" },
+  { id: "gpt-4o-mini", name: "GPT-4o Mini", inputCost: "$0.15", outputCost: "$0.60" },
+  { id: "gpt-4o", name: "GPT-4o", inputCost: "$2.50", outputCost: "$10.00" },
+  { id: "gpt-5-nano", name: "GPT-5 Nano", inputCost: "$0.05", outputCost: "$0.40" },
+  { id: "gpt-5-mini", name: "GPT-5 Mini", inputCost: "$0.25", outputCost: "$2.00" },
+  { id: "gpt-5", name: "GPT-5", inputCost: "$1.25", outputCost: "$10.00" },
+  { id: "gpt-5.1", name: "GPT-5.1", inputCost: "$1.25", outputCost: "$10.00" },
+  { id: "gpt-5.2", name: "GPT-5.2", inputCost: "$1.75", outputCost: "$14.00" },
+  { id: "gpt-5.4-nano", name: "GPT-5.4 Nano", inputCost: "$0.20", outputCost: "$1.25" },
+  { id: "gpt-5.4-mini", name: "GPT-5.4 Mini", inputCost: "$0.75", outputCost: "$4.50" },
+  { id: "gpt-5.4", name: "GPT-5.4", inputCost: "$2.50", outputCost: "$15.00" },
+  { id: "gpt-5.4-pro", name: "GPT-5.4 Pro", inputCost: "$30.00", outputCost: "$180.00" },
+  { id: "o3-mini", name: "o3-mini", inputCost: "$1.10", outputCost: "$4.40" },
+  { id: "o3", name: "o3", inputCost: "$2.00", outputCost: "$8.00" },
+  { id: "o4-mini", name: "o4-mini", inputCost: "$1.10", outputCost: "$4.40" },
+];
+
+const COMPLEXITY_OPTIONS: { value: QuestionComplexity; label: string; desc: string }[] = [
+  { value: "brief", label: "Brief, Core Idea", desc: "Short, focused questions testing key concepts" },
+  { value: "elaborate", label: "Elaborate Answers", desc: "Detailed answer choices for deeper learning" },
+  { value: "practical", label: "Practical Application", desc: "Real-world scenario & application questions" },
+];
 
 function App() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -16,6 +42,12 @@ function App() {
   const [generationProgress, setGenerationProgress] = useState(0);
 
   const [quizMode, setQuizMode] = useState(false);
+
+  // Generation options state
+  const [complexity, setComplexity] = useState<QuestionComplexity>("brief");
+  const [selectedModelId, setSelectedModelId] = useState("gpt-4.1-nano");
+  const [useCustomModel, setUseCustomModel] = useState(false);
+  const [customModelName, setCustomModelName] = useState("");
 
   useEffect(() => {
     const key = localStorage.getItem("openai_api_key");
@@ -32,6 +64,8 @@ function App() {
     setIsSettingsOpen(false);
   };
 
+  const activeModel = useCustomModel ? customModelName.trim() : selectedModelId;
+
   const handleContentExtracted = async (content: string) => {
     if (!apiKey) {
       setIsSettingsOpen(true);
@@ -47,12 +81,14 @@ function App() {
       chunks.push(content.substring(i, i + chunkSize));
     }
 
+    const options = { model: activeModel || "gpt-4.1-nano", complexity };
+
     try {
       const newQuestions: Question[] = [];
       for (let i = 0; i < chunks.length; i++) {
         const chunk = chunks[i];
         try {
-          const generated = await generateQuestionsChunk(chunk, apiKey);
+          const generated = await generateQuestionsChunk(chunk, apiKey, options);
           newQuestions.push(
             ...generated.map((q) => ({
               ...q,
@@ -133,6 +169,86 @@ function App() {
                     <p className="text-right text-xs text-indigo-600 mt-1">{generationProgress}% complete</p>
                   </div>
                 )}
+              </div>
+
+              {/* Generation Options */}
+              <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">Generation Options</h2>
+
+                {/* Question Complexity */}
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Question Complexity</label>
+                  <div className="space-y-2">
+                    {COMPLEXITY_OPTIONS.map((opt) => (
+                      <label
+                        key={opt.value}
+                        className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
+                          complexity === opt.value
+                            ? "border-indigo-500 bg-indigo-50 shadow-sm"
+                            : "border-gray-200 hover:border-indigo-300 hover:bg-gray-50"
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="complexity"
+                          value={opt.value}
+                          checked={complexity === opt.value}
+                          onChange={() => setComplexity(opt.value)}
+                          className="mt-0.5 w-4 h-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"
+                        />
+                        <div>
+                          <span className="text-sm font-medium text-gray-900">{opt.label}</span>
+                          <p className="text-xs text-gray-500 mt-0.5">{opt.desc}</p>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                {/* API Model Selection */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">API Model</label>
+
+                  <div className="flex items-center gap-3 mb-3">
+                    <label className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm font-medium cursor-pointer transition-all ${!useCustomModel ? "border-indigo-500 bg-indigo-50 text-indigo-700" : "border-gray-200 text-gray-600 hover:border-indigo-300"}`}>
+                      <input type="radio" name="modelMode" checked={!useCustomModel} onChange={() => setUseCustomModel(false)} className="sr-only" />
+                      Select from list
+                    </label>
+                    <label className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm font-medium cursor-pointer transition-all ${useCustomModel ? "border-indigo-500 bg-indigo-50 text-indigo-700" : "border-gray-200 text-gray-600 hover:border-indigo-300"}`}>
+                      <input type="radio" name="modelMode" checked={useCustomModel} onChange={() => setUseCustomModel(true)} className="sr-only" />
+                      Custom model
+                    </label>
+                  </div>
+
+                  {!useCustomModel ? (
+                    <div className="relative">
+                      <select
+                        value={selectedModelId}
+                        onChange={(e) => setSelectedModelId(e.target.value)}
+                        className="w-full appearance-none bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 pr-10 text-sm font-medium text-gray-800 outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                      >
+                        {MODEL_OPTIONS.map((m) => (
+                          <option key={m.id} value={m.id}>
+                            {m.name}  —  In: {m.inputCost} / Out: {m.outputCost} per 1M tokens
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown className="w-4 h-4 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    </div>
+                  ) : (
+                    <input
+                      type="text"
+                      value={customModelName}
+                      onChange={(e) => setCustomModelName(e.target.value)}
+                      placeholder="e.g. gpt-4o-2024-05-13"
+                      className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    />
+                  )}
+
+                  {!useCustomModel && (
+                    <p className="text-xs text-gray-400 mt-2">Prices per 1M tokens. Costs shown are for standard input / output.</p>
+                  )}
+                </div>
               </div>
             </div>
 
