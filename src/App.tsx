@@ -1,10 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { Settings, BookOpen, Loader2, ChevronDown } from "lucide-react";
 import SettingsModal from "./components/SettingsModal";
 import FileUploader from "./components/FileUploader";
 import QuestionBankViewer from "./components/QuestionBankViewer";
+import QuizConfigModal from "./components/QuizConfigModal";
 import QuizUI from "./components/QuizUI";
-import type { Question, QuestionComplexity, ModelOption } from "./types";
+import type { Question, QuestionComplexity, ModelOption, QuizConfig } from "./types";
 import { generateQuestionsChunk } from "./services/ai";
 
 const MODEL_OPTIONS: ModelOption[] = [
@@ -42,6 +43,8 @@ function App() {
   const [generationProgress, setGenerationProgress] = useState(0);
 
   const [quizMode, setQuizMode] = useState(false);
+  const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
+  const [activeQuizQuestions, setActiveQuizQuestions] = useState<Question[]>([]);
 
   // Generation options state
   const [complexity, setComplexity] = useState<QuestionComplexity>("brief");
@@ -66,7 +69,13 @@ function App() {
 
   const activeModel = useCustomModel ? customModelName.trim() : selectedModelId;
 
-  const handleContentExtracted = async (content: string) => {
+  const sourceFiles = useMemo(() => {
+    const files = new Set<string>();
+    questions.forEach((q) => { if (q.sourceFile) files.add(q.sourceFile); });
+    return Array.from(files);
+  }, [questions]);
+
+  const handleContentExtracted = async (content: string, filename: string) => {
     if (!apiKey) {
       setIsSettingsOpen(true);
       return;
@@ -93,6 +102,7 @@ function App() {
             ...generated.map((q) => ({
               ...q,
               id: Math.random().toString(36).substr(2, 9),
+              sourceFile: filename,
             })),
           );
           setQuestions([...questions, ...newQuestions]);
@@ -106,10 +116,37 @@ function App() {
     }
   };
 
+  const handleStartQuizWithConfig = useCallback((config: QuizConfig) => {
+    let selected: Question[] = [];
+
+    if (config.questionsPerFile > 0 && sourceFiles.length > 0) {
+      // Pick questionsPerFile from each source file
+      for (const file of sourceFiles) {
+        const fileQuestions = questions.filter((q) => q.sourceFile === file);
+        const picked = fileQuestions.slice(0, config.questionsPerFile);
+        selected.push(...picked);
+      }
+    } else {
+      selected = [...questions];
+    }
+
+    // Limit to totalQuestions
+    selected = selected.slice(0, config.totalQuestions);
+
+    // Scramble if needed
+    if (config.scrambled) {
+      selected = selected.sort(() => Math.random() - 0.5);
+    }
+
+    setActiveQuizQuestions(selected);
+    setIsConfigModalOpen(false);
+    setQuizMode(true);
+  }, [questions, sourceFiles]);
+
   if (quizMode) {
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col pt-12 px-4 sm:px-6 lg:px-8">
-        <QuizUI questions={questions} apiKey={apiKey} onExit={() => setQuizMode(false)} />
+        <QuizUI questions={activeQuizQuestions} apiKey={apiKey} onExit={() => setQuizMode(false)} />
       </div>
     );
   }
@@ -256,12 +293,8 @@ function App() {
               <QuestionBankViewer
                 questions={questions}
                 onImported={(imported) => setQuestions([...questions, ...imported])}
-                onStartQuiz={() => setQuizMode(true)}
+                onStartQuiz={() => setIsConfigModalOpen(true)}
                 onClear={() => setQuestions([])}
-                onShuffle={() => {
-                  const shuffled = [...questions].sort(() => Math.random() - 0.5);
-                  setQuestions(shuffled);
-                }}
               />
             </div>
           </div>
@@ -269,6 +302,14 @@ function App() {
       </main>
 
       {isSettingsOpen && <SettingsModal currentKey={apiKey} onSave={handleSaveApiKey} onClose={() => setIsSettingsOpen(false)} />}
+      {isConfigModalOpen && (
+        <QuizConfigModal
+          totalAvailable={questions.length}
+          sourceFiles={sourceFiles}
+          onStart={handleStartQuizWithConfig}
+          onClose={() => setIsConfigModalOpen(false)}
+        />
+      )}
     </div>
   );
 }

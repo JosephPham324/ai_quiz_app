@@ -5,6 +5,13 @@ export interface Question {
   options?: string[]; // 4 options for multiple choice
   correctOptionIndex?: number;
   writtenAnswerReference?: string;
+  sourceFile?: string;
+}
+
+export interface QuizConfig {
+  totalQuestions: number;
+  questionsPerFile: number;
+  scrambled: boolean;
 }
 
 export interface EvaluationResult {

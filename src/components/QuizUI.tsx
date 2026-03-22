@@ -188,6 +188,8 @@ export default function QuizUI({ questions, apiKey, onExit }: QuizUIProps) {
               <option value="Rust">Rust</option>
               <option value="Swift">Swift</option>
               <option value="Kotlin">Kotlin</option>
+              <option value="SqlServer">SQL Server</option>
+              <option value="MongoDB">MongoDB</option>
             </select>
           </div>
           <button onClick={onExit} className="text-sm text-gray-400 hover:text-gray-600">
