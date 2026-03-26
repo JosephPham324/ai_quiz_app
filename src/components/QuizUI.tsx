@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { Question, EvaluationResult, CodingGradingResult } from "../types";
 import { gradeWrittenAnswer, gradeCodingAnswer, evaluatePracticalExample, generateAIExample } from "../services/ai";
-import { BrainCircuit, Check, X, ArrowRight, RotateCcw, Lightbulb, Sparkles, Code } from "lucide-react";
+import { BrainCircuit, Check, X, ArrowRight, ArrowLeft, RotateCcw, Lightbulb, Sparkles, Code } from "lucide-react";
 import MarkdownContent from "./MarkdownContent";
 
 interface QuizUIProps {
@@ -27,20 +27,191 @@ const CODE_LANGUAGES = [
   "MongoDB",
 ];
 
-export default function QuizUI({ questions, apiKey, onExit }: QuizUIProps) {
+// Wrapper to easily reset all state by changing the key
+export default function QuizUI(props: QuizUIProps) {
+  const [attempt, setAttempt] = useState(1);
+  return <QuizSession key={attempt} {...props} onRetake={() => setAttempt((a) => a + 1)} />;
+}
+
+interface QuizSessionProps extends QuizUIProps {
+  onRetake: () => void;
+}
+
+function QuizSession({ questions, apiKey, onExit, onRetake }: QuizSessionProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [answerMode, setAnswerMode] = useState<"multiple-choice" | "written" | "code">("multiple-choice");
+  const [isFinished, setIsFinished] = useState(false);
+  const [scores, setScores] = useState<number[]>(new Array(questions.length).fill(0));
+  const [preferredLanguage, setPreferredLanguage] = useState("JavaScript");
+
+  const [defaultAnswerMode, setDefaultAnswerMode] = useState<"multiple-choice" | "written" | "code">("multiple-choice");
+  const [defaultCodeLanguage, setDefaultCodeLanguage] = useState<string>("JavaScript");
+
+  const totalScore = scores.reduce((a, b) => a + b, 0);
+
+  if (isFinished) {
+    return (
+      <div className="bg-white p-8 rounded-lg shadow-sm border border-gray-200 text-center">
+        <h2 className="text-3xl font-bold text-gray-900 mb-4">Quiz Completed!</h2>
+        <p className="text-xl text-gray-600 mb-8">
+          You scored {totalScore} out of {questions.length}
+        </p>
+        <div className="flex justify-center gap-4">
+          <button
+            onClick={onRetake}
+            className="flex items-center gap-2 px-6 py-3 bg-indigo-50 text-indigo-700 rounded-lg hover:bg-indigo-100 transition-colors font-medium"
+          >
+            <RotateCcw className="w-5 h-5" /> Retake Quiz
+          </button>
+          <button onClick={onExit} className="px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium">
+            Exit to Dashboard
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 max-w-3xl mx-auto">
+      <div className="flex justify-between items-center mb-6">
+        <div className="flex items-center gap-3">
+          <span className="text-sm font-medium text-gray-500 uppercase tracking-wider">Question</span>
+          <select
+            value={currentIndex}
+            onChange={(e) => setCurrentIndex(Number(e.target.value))}
+            className="bg-gray-50 border border-gray-200 rounded px-2 py-1 text-sm font-medium text-gray-900 outline-none focus:ring-1 focus:ring-indigo-500"
+          >
+            {questions.map((_, idx) => (
+              <option key={idx} value={idx}>
+                {idx + 1} of {questions.length}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold text-gray-500 uppercase">AI Example Language:</span>
+            <select
+              value={preferredLanguage}
+              onChange={(e) => setPreferredLanguage(e.target.value)}
+              className="bg-gray-50 border border-gray-200 rounded px-2 py-1 text-xs font-medium text-gray-700 outline-none focus:ring-1 focus:ring-indigo-500"
+            >
+              {CODE_LANGUAGES.map((lang) => (
+                <option key={lang} value={lang}>
+                  {lang}
+                </option>
+              ))}
+            </select>
+          </div>
+          <button onClick={onExit} className="text-sm text-gray-400 hover:text-gray-600">
+            Cancel
+          </button>
+        </div>
+      </div>
+
+      {questions.map((q, idx) => (
+        <div key={q.id} className={idx === currentIndex ? "block" : "hidden"}>
+          <QuestionCard
+            question={q}
+            apiKey={apiKey}
+            preferredLanguage={preferredLanguage}
+            isFirst={idx === 0}
+            isLast={idx === questions.length - 1}
+            defaultAnswerMode={defaultAnswerMode}
+            onAnswerModeChange={setDefaultAnswerMode}
+            defaultCodeLanguage={defaultCodeLanguage}
+            onCodeLanguageChange={setDefaultCodeLanguage}
+            onScore={(points) => {
+              setScores((prev) => {
+                const next = [...prev];
+                next[idx] = points;
+                return next;
+              });
+            }}
+            onNext={() => {
+              if (idx < questions.length - 1) setCurrentIndex(idx + 1);
+              else setIsFinished(true);
+            }}
+            onPrev={() => {
+              if (idx > 0) setCurrentIndex(idx - 1);
+            }}
+          />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+interface QuestionCardProps {
+  question: Question;
+  apiKey: string;
+  preferredLanguage: string;
+  isFirst: boolean;
+  isLast: boolean;
+  defaultAnswerMode: "multiple-choice" | "written" | "code";
+  onAnswerModeChange: (mode: "multiple-choice" | "written" | "code") => void;
+  defaultCodeLanguage: string;
+  onCodeLanguageChange: (lang: string) => void;
+  onScore: (points: number) => void;
+  onNext: () => void;
+  onPrev: () => void;
+}
+
+function QuestionCard({
+  question,
+  apiKey,
+  preferredLanguage,
+  isFirst,
+  isLast,
+  defaultAnswerMode,
+  onAnswerModeChange,
+  defaultCodeLanguage,
+  onCodeLanguageChange,
+  onScore,
+  onNext,
+  onPrev,
+}: QuestionCardProps) {
+  const [answerModeState, setAnswerModeState] = useState<"multiple-choice" | "written" | "code">(defaultAnswerMode);
+  const [codeLanguageState, setCodeLanguageState] = useState(defaultCodeLanguage);
+
   const [gradingMode, setGradingMode] = useState<"ai" | "strict">("ai");
 
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
   const [writtenInput, setWrittenInput] = useState("");
 
-  // Code editor state
   const [rationaleInput, setRationaleInput] = useState("");
   const [codeContent, setCodeContent] = useState("");
-  const [codeLanguage, setCodeLanguage] = useState("JavaScript");
+
+  const [isModeDirty, setIsModeDirty] = useState(false);
+  const [isLangDirty, setIsLangDirty] = useState(false);
 
   const [isSubmitted, setIsSubmitted] = useState(false);
+
+  useEffect(() => {
+    if (!isModeDirty && !isSubmitted) {
+      setAnswerModeState(defaultAnswerMode);
+    }
+  }, [defaultAnswerMode, isModeDirty, isSubmitted]);
+
+  useEffect(() => {
+    if (!isLangDirty && !isSubmitted) {
+      setCodeLanguageState(defaultCodeLanguage);
+    }
+  }, [defaultCodeLanguage, isLangDirty, isSubmitted]);
+
+  const answerMode = answerModeState;
+  const codeLanguage = codeLanguageState;
+
+  const setAnswerMode = (mode: "multiple-choice" | "written" | "code") => {
+    setAnswerModeState(mode);
+    setIsModeDirty(true);
+    onAnswerModeChange(mode);
+  };
+
+  const setCodeLanguage = (lang: string) => {
+    setCodeLanguageState(lang);
+    setIsLangDirty(true);
+    onCodeLanguageChange(lang);
+  };
   const [gradingResult, setGradingResult] = useState<EvaluationResult | null>(null);
   const [codingResult, setCodingResult] = useState<CodingGradingResult | null>(null);
   const [isGrading, setIsGrading] = useState(false);
@@ -52,19 +223,13 @@ export default function QuizUI({ questions, apiKey, onExit }: QuizUIProps) {
 
   const [aiExample, setAiExample] = useState<string | null>(null);
   const [isGeneratingAIExample, setIsGeneratingAIExample] = useState(false);
-  const [preferredLanguage, setPreferredLanguage] = useState("JavaScript");
-
-  const [score, setScore] = useState(0);
-  const [isFinished, setIsFinished] = useState(false);
-
-  const currentQuestion = questions[currentIndex];
 
   const handleSubmitOptions = async () => {
     if (selectedOption === null) return;
     setIsSubmitted(true);
 
-    if (selectedOption === currentQuestion.correctOptionIndex) {
-      setScore((s) => s + 1);
+    if (selectedOption === question.correctOptionIndex) {
+      onScore(1);
       setGradingResult({ score: 100, feedback: "Correct!" });
     } else {
       setGradingResult({ score: 0, feedback: "Incorrect." });
@@ -73,8 +238,8 @@ export default function QuizUI({ questions, apiKey, onExit }: QuizUIProps) {
     if (isPracticalEnabled && practicalInput.trim()) {
       setIsEvaluatingExample(true);
       try {
-        const refAnswer = currentQuestion.options?.[currentQuestion.correctOptionIndex!] || "";
-        const result = await evaluatePracticalExample(currentQuestion.text, refAnswer, practicalInput, apiKey);
+        const refAnswer = question.options?.[question.correctOptionIndex!] || "";
+        const result = await evaluatePracticalExample(question.text, refAnswer, practicalInput, apiKey);
         setExampleResult(result);
       } catch (err) {
         setExampleResult({ score: 0, feedback: "Failed to evaluate example." });
@@ -88,16 +253,15 @@ export default function QuizUI({ questions, apiKey, onExit }: QuizUIProps) {
     if (!writtenInput.trim()) return;
     setIsSubmitted(true);
 
-    // Initial grading
     if (gradingMode === "strict") {
-      const isCorrect = writtenInput.trim().toLowerCase() === (currentQuestion.writtenAnswerReference || "").trim().toLowerCase();
-      if (isCorrect) setScore((s) => s + 1);
+      const isCorrect = writtenInput.trim().toLowerCase() === (question.writtenAnswerReference || "").trim().toLowerCase();
+      if (isCorrect) onScore(1);
       setGradingResult({ score: isCorrect ? 100 : 0, feedback: isCorrect ? "Exact match!" : "No match." });
     } else {
       setIsGrading(true);
       try {
-        const result = await gradeWrittenAnswer(currentQuestion.text, currentQuestion.writtenAnswerReference || "", writtenInput, apiKey);
-        if (result.score >= 80) setScore((s) => s + 1);
+        const result = await gradeWrittenAnswer(question.text, question.writtenAnswerReference || "", writtenInput, apiKey);
+        if (result.score >= 80) onScore(1);
         setGradingResult(result);
       } catch (err) {
         setGradingResult({ score: 0, feedback: "Failed to grade with AI." });
@@ -106,16 +270,10 @@ export default function QuizUI({ questions, apiKey, onExit }: QuizUIProps) {
       }
     }
 
-    // Practical example evaluation
     if (isPracticalEnabled && practicalInput.trim()) {
       setIsEvaluatingExample(true);
       try {
-        const result = await evaluatePracticalExample(
-          currentQuestion.text,
-          currentQuestion.writtenAnswerReference || "",
-          practicalInput,
-          apiKey,
-        );
+        const result = await evaluatePracticalExample(question.text, question.writtenAnswerReference || "", practicalInput, apiKey);
         setExampleResult(result);
       } catch (err) {
         setExampleResult({ score: 0, feedback: "Failed to evaluate practical example." });
@@ -132,8 +290,8 @@ export default function QuizUI({ questions, apiKey, onExit }: QuizUIProps) {
 
     try {
       const result = await gradeCodingAnswer(
-        currentQuestion.text,
-        currentQuestion.writtenAnswerReference || "",
+        question.text,
+        question.writtenAnswerReference || "",
         rationaleInput,
         codeContent,
         codeLanguage,
@@ -141,7 +299,7 @@ export default function QuizUI({ questions, apiKey, onExit }: QuizUIProps) {
       );
       setCodingResult(result);
       const avgScore = Math.round((result.rationaleScore + result.codeScore) / 2);
-      if (avgScore >= 80) setScore((s) => s + 1);
+      if (avgScore >= 80) onScore(1);
     } catch (err) {
       setCodingResult({
         rationaleScore: 0,
@@ -153,16 +311,10 @@ export default function QuizUI({ questions, apiKey, onExit }: QuizUIProps) {
       setIsGrading(false);
     }
 
-    // Practical example evaluation
     if (isPracticalEnabled && practicalInput.trim()) {
       setIsEvaluatingExample(true);
       try {
-        const result = await evaluatePracticalExample(
-          currentQuestion.text,
-          currentQuestion.writtenAnswerReference || "",
-          practicalInput,
-          apiKey,
-        );
+        const result = await evaluatePracticalExample(question.text, question.writtenAnswerReference || "", practicalInput, apiKey);
         setExampleResult(result);
       } catch (err) {
         setExampleResult({ score: 0, feedback: "Failed to evaluate practical example." });
@@ -176,38 +328,16 @@ export default function QuizUI({ questions, apiKey, onExit }: QuizUIProps) {
     setIsGeneratingAIExample(true);
     try {
       const refAnswer =
-        currentQuestion.type === "multiple-choice"
-          ? currentQuestion.options?.[currentQuestion.correctOptionIndex!] || ""
-          : currentQuestion.writtenAnswerReference || "";
-      const result = await generateAIExample(currentQuestion.text, refAnswer, apiKey, preferredLanguage);
+        question.type === "multiple-choice"
+          ? question.options?.[question.correctOptionIndex!] || ""
+          : question.writtenAnswerReference || "";
+      const result = await generateAIExample(question.text, refAnswer, apiKey, preferredLanguage);
       setAiExample(result.example);
     } catch (err) {
       setAiExample("Failed to generate an AI example. Please try again.");
     } finally {
       setIsGeneratingAIExample(false);
     }
-  };
-
-  const handleNext = () => {
-    if (currentIndex < questions.length - 1) {
-      setCurrentIndex((i) => i + 1);
-      resetState();
-    } else {
-      setIsFinished(true);
-    }
-  };
-
-  const resetState = () => {
-    setSelectedOption(null);
-    setWrittenInput("");
-    setRationaleInput("");
-    setCodeContent("");
-    setIsSubmitted(false);
-    setGradingResult(null);
-    setCodingResult(null);
-    setPracticalInput("");
-    setExampleResult(null);
-    setAiExample(null);
   };
 
   const handleSubmit = () => {
@@ -222,70 +352,20 @@ export default function QuizUI({ questions, apiKey, onExit }: QuizUIProps) {
     return !rationaleInput.trim() && !codeContent.trim();
   };
 
+  const handleTryAgain = () => {
+    setIsSubmitted(false);
+    setGradingResult(null);
+    setCodingResult(null);
+    setExampleResult(null);
+    setAiExample(null);
+    onScore(0);
+  };
+
   const overallCodingScore = codingResult ? Math.round((codingResult.rationaleScore + codingResult.codeScore) / 2) : 0;
 
-  if (isFinished) {
-    return (
-      <div className="bg-white p-8 rounded-lg shadow-sm border border-gray-200 text-center">
-        <h2 className="text-3xl font-bold text-gray-900 mb-4">Quiz Completed!</h2>
-        <p className="text-xl text-gray-600 mb-8">
-          You scored {score} out of {questions.length}
-        </p>
-        <div className="flex justify-center gap-4">
-          <button
-            onClick={() => {
-              setCurrentIndex(0);
-              setScore(0);
-              setIsFinished(false);
-              resetState();
-            }}
-            className="flex items-center gap-2 px-6 py-3 bg-indigo-50 text-indigo-700 rounded-lg hover:bg-indigo-100 transition-colors font-medium"
-          >
-            <RotateCcw className="w-5 h-5" /> Retake Quiz
-          </button>
-          <button onClick={onExit} className="px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium">
-            Exit to Dashboard
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 max-w-3xl mx-auto">
-      <div className="flex justify-between items-center mb-6">
-        <span className="text-sm font-medium text-gray-500 uppercase tracking-wider">
-          Question {currentIndex + 1} of {questions.length}
-        </span>
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-gray-500 uppercase">AI Example Language:</span>
-            <select
-              value={preferredLanguage}
-              onChange={(e) => setPreferredLanguage(e.target.value)}
-              className="bg-gray-50 border border-gray-200 rounded px-2 py-1 text-xs font-medium text-gray-700 outline-none focus:ring-1 focus:ring-indigo-500"
-            >
-              <option value="JavaScript">JavaScript</option>
-              <option value="TypeScript">TypeScript</option>
-              <option value="Python">Python</option>
-              <option value="Java">Java</option>
-              <option value="C++">C++</option>
-              <option value="C#">C#</option>
-              <option value="Go">Go</option>
-              <option value="Rust">Rust</option>
-              <option value="Swift">Swift</option>
-              <option value="Kotlin">Kotlin</option>
-              <option value="SqlServer">SQL Server</option>
-              <option value="MongoDB">MongoDB</option>
-            </select>
-          </div>
-          <button onClick={onExit} className="text-sm text-gray-400 hover:text-gray-600">
-            Cancel
-          </button>
-        </div>
-      </div>
-
-      <h2 className="text-xl font-semibold text-gray-900 mb-6">{currentQuestion.text}</h2>
+    <>
+      <h2 className="text-xl font-semibold text-gray-900 mb-6">{question.text}</h2>
 
       <div className="flex flex-wrap items-center gap-4 mb-6">
         <div className="flex gap-2 bg-gray-50 p-1 rounded-lg w-fit">
@@ -327,14 +407,14 @@ export default function QuizUI({ questions, apiKey, onExit }: QuizUIProps) {
       <div className="min-h-[200px]">
         {answerMode === "multiple-choice" ? (
           <div className="space-y-3">
-            {currentQuestion.options?.map((opt, idx) => (
+            {question.options?.map((opt, idx) => (
               <button
                 key={idx}
                 disabled={isSubmitted}
                 onClick={() => setSelectedOption(idx)}
                 className={`w-full text-left p-4 rounded-lg border transition-all ${
                   isSubmitted
-                    ? idx === currentQuestion.correctOptionIndex
+                    ? idx === question.correctOptionIndex
                       ? "bg-green-50 border-green-500 text-green-900"
                       : idx === selectedOption
                         ? "bg-red-50 border-red-500 text-red-900"
@@ -346,8 +426,8 @@ export default function QuizUI({ questions, apiKey, onExit }: QuizUIProps) {
               >
                 <div className="flex justify-between items-center">
                   <span>{opt}</span>
-                  {isSubmitted && idx === currentQuestion.correctOptionIndex && <Check className="w-5 h-5 text-green-600" />}
-                  {isSubmitted && idx === selectedOption && idx !== currentQuestion.correctOptionIndex && <X className="w-5 h-5 text-red-600" />}
+                  {isSubmitted && idx === question.correctOptionIndex && <Check className="w-5 h-5 text-green-600" />}
+                  {isSubmitted && idx === selectedOption && idx !== question.correctOptionIndex && <X className="w-5 h-5 text-red-600" />}
                 </div>
               </button>
             ))}
@@ -375,7 +455,6 @@ export default function QuizUI({ questions, apiKey, onExit }: QuizUIProps) {
             />
           </div>
         ) : (
-          /* Code Editor Mode */
           <div className="space-y-4">
             <div className="flex justify-end gap-2 items-center text-sm mb-2">
               <span className="text-gray-500">Code language:</span>
@@ -393,11 +472,8 @@ export default function QuizUI({ questions, apiKey, onExit }: QuizUIProps) {
               </select>
             </div>
 
-            {/* Rationale input */}
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                Rationale / Explanation
-              </label>
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Rationale / Explanation</label>
               <textarea
                 value={rationaleInput}
                 onChange={(e) => setRationaleInput(e.target.value)}
@@ -407,7 +483,6 @@ export default function QuizUI({ questions, apiKey, onExit }: QuizUIProps) {
               />
             </div>
 
-            {/* Code input */}
             <div>
               <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-1.5">
                 <Code className="w-4 h-4 text-emerald-600" />
@@ -467,11 +542,8 @@ export default function QuizUI({ questions, apiKey, onExit }: QuizUIProps) {
 
       {isSubmitted && (gradingResult || codingResult || exampleResult || aiExample) && !isGrading && !isEvaluatingExample && !isGeneratingAIExample && (
         <div className="mt-6 space-y-4">
-          {/* Written answer result */}
           {gradingResult && (
-            <div
-              className={`p-4 rounded-lg border ${gradingResult.score >= 80 ? "bg-green-50 border-green-200" : "bg-orange-50 border-orange-200"}`}
-            >
+            <div className={`p-4 rounded-lg border ${gradingResult.score >= 80 ? "bg-green-50 border-green-200" : "bg-orange-50 border-orange-200"}`}>
               <div className="flex items-center gap-2 mb-2">
                 <span className="font-semibold">{gradingResult.score >= 80 ? "Good Job!" : "Needs Improvement"}</span>
                 <span className="text-sm bg-white px-2 py-0.5 rounded-full shadow-sm ml-auto">Score: {gradingResult.score}/100</span>
@@ -480,66 +552,47 @@ export default function QuizUI({ questions, apiKey, onExit }: QuizUIProps) {
               {answerMode === "written" && (
                 <div className="mt-3 pt-3 border-t border-black/10">
                   <p className="text-xs text-gray-500 font-medium uppercase mb-1">Reference Answer</p>
-                  <p className="text-sm text-gray-800">{currentQuestion.writtenAnswerReference}</p>
+                  <p className="text-sm text-gray-800">{question.writtenAnswerReference}</p>
                 </div>
               )}
             </div>
           )}
 
-          {/* Coding answer result */}
           {codingResult && (
             <div className="space-y-3">
-              {/* Rationale score */}
-              <div
-                className={`p-4 rounded-lg border ${codingResult.rationaleScore >= 80 ? "bg-green-50 border-green-200" : "bg-orange-50 border-orange-200"}`}
-              >
+              <div className={`p-4 rounded-lg border ${codingResult.rationaleScore >= 80 ? "bg-green-50 border-green-200" : "bg-orange-50 border-orange-200"}`}>
                 <div className="flex items-center gap-2 mb-2">
                   <span className="font-semibold text-gray-900">Rationale</span>
-                  <span className="text-sm bg-white px-2 py-0.5 rounded-full shadow-sm ml-auto">
-                    Score: {codingResult.rationaleScore}/100
-                  </span>
+                  <span className="text-sm bg-white px-2 py-0.5 rounded-full shadow-sm ml-auto">Score: {codingResult.rationaleScore}/100</span>
                 </div>
                 <p className="text-gray-700 text-sm">{codingResult.rationaleFeedback}</p>
               </div>
 
-              {/* Code score */}
-              <div
-                className={`p-4 rounded-lg border ${codingResult.codeScore >= 80 ? "bg-emerald-50 border-emerald-200" : "bg-orange-50 border-orange-200"}`}
-              >
+              <div className={`p-4 rounded-lg border ${codingResult.codeScore >= 80 ? "bg-emerald-50 border-emerald-200" : "bg-orange-50 border-orange-200"}`}>
                 <div className="flex items-center gap-2 mb-2">
                   <Code className="w-4 h-4 text-emerald-600" />
                   <span className="font-semibold text-gray-900">Code Solution</span>
-                  <span className="text-sm bg-white px-2 py-0.5 rounded-full shadow-sm ml-auto">
-                    Score: {codingResult.codeScore}/100
-                  </span>
+                  <span className="text-sm bg-white px-2 py-0.5 rounded-full shadow-sm ml-auto">Score: {codingResult.codeScore}/100</span>
                 </div>
                 <p className="text-gray-700 text-sm">{codingResult.codeFeedback}</p>
               </div>
 
-              {/* Overall */}
               <div className="flex items-center justify-between px-4 py-2 rounded-lg bg-gray-50 border border-gray-200">
-                <span className="text-sm font-semibold text-gray-700">
-                  {overallCodingScore >= 80 ? "🎉 Great work!" : "📝 Keep practicing!"}
-                </span>
-                <span className="text-sm font-medium text-gray-600">
-                  Overall: {overallCodingScore}/100
-                </span>
+                <span className="text-sm font-semibold text-gray-700">{overallCodingScore >= 80 ? "🎉 Great work!" : "📝 Keep practicing!"}</span>
+                <span className="text-sm font-medium text-gray-600">Overall: {overallCodingScore}/100</span>
               </div>
 
-              {/* Reference */}
               <div className="mt-3 pt-3 border-t border-black/10">
                 <p className="text-xs text-gray-500 font-medium uppercase mb-1">Reference Answer</p>
                 <div className="text-sm text-gray-800 bg-gray-50 p-3 rounded-lg border border-gray-200">
-                  <MarkdownContent content={currentQuestion.writtenAnswerReference || ""} />
+                  <MarkdownContent content={question.writtenAnswerReference || ""} />
                 </div>
               </div>
             </div>
           )}
 
           {exampleResult && (
-            <div
-              className={`p-4 rounded-lg border ${exampleResult.score >= 80 ? "bg-amber-50 border-amber-200" : "bg-orange-50 border-orange-200"}`}
-            >
+            <div className={`p-4 rounded-lg border ${exampleResult.score >= 80 ? "bg-amber-50 border-amber-200" : "bg-orange-50 border-orange-200"}`}>
               <div className="flex items-center gap-2 mb-2">
                 <Lightbulb className="w-4 h-4 text-amber-600" />
                 <span className="font-semibold text-amber-900">Practical Example Evaluation</span>
@@ -563,50 +616,61 @@ export default function QuizUI({ questions, apiKey, onExit }: QuizUIProps) {
         </div>
       )}
 
-      <div className="mt-8 flex justify-end items-center gap-3">
-        {!isSubmitted ? (
-          <button
-            onClick={handleSubmit}
-            disabled={isSubmitDisabled()}
-            className="px-6 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium disabled:opacity-50"
-          >
-            Submit Answer
-          </button>
-        ) : (
-          <>
-            {!aiExample && !isGeneratingAIExample && (
+      <div className="mt-8 flex justify-between items-center bg-gray-50/50 p-2 rounded-xl border border-gray-100">
+        <button
+          onClick={onPrev}
+          disabled={isFirst}
+          className="flex items-center gap-2 px-6 py-2.5 bg-white text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors font-medium disabled:opacity-50"
+        >
+          <ArrowLeft className="w-4 h-4" /> Previous
+        </button>
+
+        <div className="flex items-center gap-3">
+          {/* Action logic */}
+          {isSubmitted && !aiExample && !isGeneratingAIExample && (
+            <button
+              onClick={handleGenerateAIExample}
+              className="flex items-center gap-2 px-6 py-2.5 bg-purple-50 text-purple-700 border border-purple-200 rounded-lg hover:bg-purple-100 transition-colors font-medium"
+            >
+              <Sparkles className="w-4 h-4" /> Provide Example
+            </button>
+          )}
+
+          {isSubmitted && ((gradingResult && gradingResult.score < 80) || (codingResult && overallCodingScore < 80)) && (
+            <button
+              onClick={handleTryAgain}
+              className="flex items-center gap-2 px-6 py-2.5 bg-white text-gray-900 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+            >
+              <RotateCcw className="w-4 h-4" /> Try Again
+            </button>
+          )}
+
+          {!isSubmitted ? (
+            <>
               <button
-                onClick={handleGenerateAIExample}
-                className="flex items-center gap-2 px-6 py-2.5 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors font-medium"
+                onClick={onNext}
+                className="flex items-center gap-2 px-6 py-2.5 bg-white text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors font-medium"
               >
-                <Sparkles className="w-4 h-4" /> Provide Example
+                {isLast ? "Skip to End" : "Skip"} <ArrowRight className="w-4 h-4" />
               </button>
-            )}
-            <div className="flex items-center gap-3">
-              {((gradingResult && gradingResult.score < 80) || (codingResult && overallCodingScore < 80)) && (
-                <button
-                  onClick={() => {
-                    setIsSubmitted(false);
-                    setGradingResult(null);
-                    setCodingResult(null);
-                    setExampleResult(null);
-                    setAiExample(null);
-                  }}
-                  className="flex items-center gap-2 px-6 py-2.5 bg-white text-gray-900 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-medium"
-                >
-                  <RotateCcw className="w-4 h-4" /> Try Again
-                </button>
-              )}
               <button
-                onClick={handleNext}
-                className="flex items-center gap-2 px-6 py-2.5 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-medium"
+                onClick={handleSubmit}
+                disabled={isSubmitDisabled()}
+                className="px-6 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium disabled:opacity-50"
               >
-                {currentIndex < questions.length - 1 ? "Next Question" : "Finish Quiz"} <ArrowRight className="w-4 h-4" />
+                Submit Answer
               </button>
-            </div>
-          </>
-        )}
+            </>
+          ) : (
+            <button
+              onClick={onNext}
+              className="flex items-center gap-2 px-6 py-2.5 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-medium"
+            >
+              {isLast ? "Finish Quiz" : "Next Question"} <ArrowRight className="w-4 h-4" />
+            </button>
+          )}
+        </div>
       </div>
-    </div>
+    </>
   );
 }
