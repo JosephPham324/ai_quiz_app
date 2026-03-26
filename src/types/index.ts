@@ -19,6 +19,13 @@ export interface EvaluationResult {
   feedback: string;
 }
 
+export interface CodingGradingResult {
+  rationaleScore: number;
+  codeScore: number;
+  rationaleFeedback: string;
+  codeFeedback: string;
+}
+
 export interface QuestionBank {
   id: string;
   title: string;
@@ -26,7 +33,7 @@ export interface QuestionBank {
   createdAt: number;
 }
 
-export type QuestionComplexity = 'brief' | 'elaborate' | 'practical';
+export type QuestionComplexity = 'brief' | 'elaborate' | 'practical' | 'coding problem';
 
 export interface ModelOption {
   id: string;

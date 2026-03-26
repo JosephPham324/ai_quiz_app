@@ -1,7 +1,7 @@
 import { useState } from "react";
-import type { Question, EvaluationResult } from "../types";
-import { gradeWrittenAnswer, evaluatePracticalExample, generateAIExample } from "../services/ai";
-import { BrainCircuit, Check, X, ArrowRight, RotateCcw, Lightbulb, Sparkles } from "lucide-react";
+import type { Question, EvaluationResult, CodingGradingResult } from "../types";
+import { gradeWrittenAnswer, gradeCodingAnswer, evaluatePracticalExample, generateAIExample } from "../services/ai";
+import { BrainCircuit, Check, X, ArrowRight, RotateCcw, Lightbulb, Sparkles, Code } from "lucide-react";
 import MarkdownContent from "./MarkdownContent";
 
 interface QuizUIProps {
@@ -10,16 +10,39 @@ interface QuizUIProps {
   onExit: () => void;
 }
 
+const CODE_LANGUAGES = [
+  "JavaScript",
+  "TypeScript",
+  "Python",
+  "Java",
+  "C++",
+  "C#",
+  "Go",
+  "Rust",
+  "Swift",
+  "Kotlin",
+  "SQL Server",
+  "MySQL",
+  "PostgreSQL",
+  "MongoDB",
+];
+
 export default function QuizUI({ questions, apiKey, onExit }: QuizUIProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [answerMode, setAnswerMode] = useState<"multiple-choice" | "written">("multiple-choice");
+  const [answerMode, setAnswerMode] = useState<"multiple-choice" | "written" | "code">("multiple-choice");
   const [gradingMode, setGradingMode] = useState<"ai" | "strict">("ai");
 
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
   const [writtenInput, setWrittenInput] = useState("");
 
+  // Code editor state
+  const [rationaleInput, setRationaleInput] = useState("");
+  const [codeContent, setCodeContent] = useState("");
+  const [codeLanguage, setCodeLanguage] = useState("JavaScript");
+
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [gradingResult, setGradingResult] = useState<EvaluationResult | null>(null);
+  const [codingResult, setCodingResult] = useState<CodingGradingResult | null>(null);
   const [isGrading, setIsGrading] = useState(false);
 
   const [isPracticalEnabled, setIsPracticalEnabled] = useState(false);
@@ -102,6 +125,53 @@ export default function QuizUI({ questions, apiKey, onExit }: QuizUIProps) {
     }
   };
 
+  const handleSubmitCode = async () => {
+    if (!rationaleInput.trim() && !codeContent.trim()) return;
+    setIsSubmitted(true);
+    setIsGrading(true);
+
+    try {
+      const result = await gradeCodingAnswer(
+        currentQuestion.text,
+        currentQuestion.writtenAnswerReference || "",
+        rationaleInput,
+        codeContent,
+        codeLanguage,
+        apiKey,
+      );
+      setCodingResult(result);
+      const avgScore = Math.round((result.rationaleScore + result.codeScore) / 2);
+      if (avgScore >= 80) setScore((s) => s + 1);
+    } catch (err) {
+      setCodingResult({
+        rationaleScore: 0,
+        codeScore: 0,
+        rationaleFeedback: "Failed to grade rationale.",
+        codeFeedback: "Failed to grade code.",
+      });
+    } finally {
+      setIsGrading(false);
+    }
+
+    // Practical example evaluation
+    if (isPracticalEnabled && practicalInput.trim()) {
+      setIsEvaluatingExample(true);
+      try {
+        const result = await evaluatePracticalExample(
+          currentQuestion.text,
+          currentQuestion.writtenAnswerReference || "",
+          practicalInput,
+          apiKey,
+        );
+        setExampleResult(result);
+      } catch (err) {
+        setExampleResult({ score: 0, feedback: "Failed to evaluate practical example." });
+      } finally {
+        setIsEvaluatingExample(false);
+      }
+    }
+  };
+
   const handleGenerateAIExample = async () => {
     setIsGeneratingAIExample(true);
     try {
@@ -130,12 +200,29 @@ export default function QuizUI({ questions, apiKey, onExit }: QuizUIProps) {
   const resetState = () => {
     setSelectedOption(null);
     setWrittenInput("");
+    setRationaleInput("");
+    setCodeContent("");
     setIsSubmitted(false);
     setGradingResult(null);
+    setCodingResult(null);
     setPracticalInput("");
     setExampleResult(null);
     setAiExample(null);
   };
+
+  const handleSubmit = () => {
+    if (answerMode === "multiple-choice") return handleSubmitOptions();
+    if (answerMode === "written") return handleSubmitWritten();
+    return handleSubmitCode();
+  };
+
+  const isSubmitDisabled = () => {
+    if (answerMode === "multiple-choice") return selectedOption === null;
+    if (answerMode === "written") return !writtenInput.trim();
+    return !rationaleInput.trim() && !codeContent.trim();
+  };
+
+  const overallCodingScore = codingResult ? Math.round((codingResult.rationaleScore + codingResult.codeScore) / 2) : 0;
 
   if (isFinished) {
     return (
@@ -216,6 +303,13 @@ export default function QuizUI({ questions, apiKey, onExit }: QuizUIProps) {
           >
             Written Answer
           </button>
+          <button
+            onClick={() => setAnswerMode("code")}
+            disabled={isSubmitted}
+            className={`flex items-center gap-1.5 px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${answerMode === "code" ? "bg-white shadow text-gray-900" : "text-gray-500 hover:text-gray-700"}`}
+          >
+            <Code className="w-3.5 h-3.5" /> Code Editor
+          </button>
         </div>
 
         <label className="flex items-center gap-2 cursor-pointer ml-auto bg-amber-50 px-3 py-1.5 rounded-lg border border-amber-100">
@@ -258,7 +352,7 @@ export default function QuizUI({ questions, apiKey, onExit }: QuizUIProps) {
               </button>
             ))}
           </div>
-        ) : (
+        ) : answerMode === "written" ? (
           <div className="space-y-4">
             <div className="flex justify-end gap-2 items-center text-sm mb-2">
               <span className="text-gray-500">Grading strictness:</span>
@@ -279,6 +373,54 @@ export default function QuizUI({ questions, apiKey, onExit }: QuizUIProps) {
               className="w-full h-32 p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 resize-none"
               placeholder="Type your answer here..."
             />
+          </div>
+        ) : (
+          /* Code Editor Mode */
+          <div className="space-y-4">
+            <div className="flex justify-end gap-2 items-center text-sm mb-2">
+              <span className="text-gray-500">Code language:</span>
+              <select
+                value={codeLanguage}
+                onChange={(e) => setCodeLanguage(e.target.value)}
+                disabled={isSubmitted}
+                className="bg-gray-50 border border-gray-200 rounded px-2 py-1 text-gray-700 outline-none"
+              >
+                {CODE_LANGUAGES.map((lang) => (
+                  <option key={lang} value={lang}>
+                    {lang}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Rationale input */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                Rationale / Explanation
+              </label>
+              <textarea
+                value={rationaleInput}
+                onChange={(e) => setRationaleInput(e.target.value)}
+                disabled={isSubmitted || isGrading}
+                className="w-full h-24 p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 resize-none text-sm"
+                placeholder="Explain your logic and reasoning..."
+              />
+            </div>
+
+            {/* Code input */}
+            <div>
+              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-1.5">
+                <Code className="w-4 h-4 text-emerald-600" />
+                Code Solution
+              </label>
+              <textarea
+                value={codeContent}
+                onChange={(e) => setCodeContent(e.target.value)}
+                disabled={isSubmitted || isGrading}
+                className="w-full h-40 p-4 border border-gray-700 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 resize-none font-mono text-sm bg-gray-900 text-gray-100 placeholder-gray-500"
+                placeholder={`Write your ${codeLanguage} code here...`}
+              />
+            </div>
           </div>
         )}
 
@@ -323,8 +465,9 @@ export default function QuizUI({ questions, apiKey, onExit }: QuizUIProps) {
         </div>
       )}
 
-      {isSubmitted && (gradingResult || exampleResult || aiExample) && !isGrading && !isEvaluatingExample && !isGeneratingAIExample && (
+      {isSubmitted && (gradingResult || codingResult || exampleResult || aiExample) && !isGrading && !isEvaluatingExample && !isGeneratingAIExample && (
         <div className="mt-6 space-y-4">
+          {/* Written answer result */}
           {gradingResult && (
             <div
               className={`p-4 rounded-lg border ${gradingResult.score >= 80 ? "bg-green-50 border-green-200" : "bg-orange-50 border-orange-200"}`}
@@ -340,6 +483,56 @@ export default function QuizUI({ questions, apiKey, onExit }: QuizUIProps) {
                   <p className="text-sm text-gray-800">{currentQuestion.writtenAnswerReference}</p>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Coding answer result */}
+          {codingResult && (
+            <div className="space-y-3">
+              {/* Rationale score */}
+              <div
+                className={`p-4 rounded-lg border ${codingResult.rationaleScore >= 80 ? "bg-green-50 border-green-200" : "bg-orange-50 border-orange-200"}`}
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="font-semibold text-gray-900">Rationale</span>
+                  <span className="text-sm bg-white px-2 py-0.5 rounded-full shadow-sm ml-auto">
+                    Score: {codingResult.rationaleScore}/100
+                  </span>
+                </div>
+                <p className="text-gray-700 text-sm">{codingResult.rationaleFeedback}</p>
+              </div>
+
+              {/* Code score */}
+              <div
+                className={`p-4 rounded-lg border ${codingResult.codeScore >= 80 ? "bg-emerald-50 border-emerald-200" : "bg-orange-50 border-orange-200"}`}
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <Code className="w-4 h-4 text-emerald-600" />
+                  <span className="font-semibold text-gray-900">Code Solution</span>
+                  <span className="text-sm bg-white px-2 py-0.5 rounded-full shadow-sm ml-auto">
+                    Score: {codingResult.codeScore}/100
+                  </span>
+                </div>
+                <p className="text-gray-700 text-sm">{codingResult.codeFeedback}</p>
+              </div>
+
+              {/* Overall */}
+              <div className="flex items-center justify-between px-4 py-2 rounded-lg bg-gray-50 border border-gray-200">
+                <span className="text-sm font-semibold text-gray-700">
+                  {overallCodingScore >= 80 ? "🎉 Great work!" : "📝 Keep practicing!"}
+                </span>
+                <span className="text-sm font-medium text-gray-600">
+                  Overall: {overallCodingScore}/100
+                </span>
+              </div>
+
+              {/* Reference */}
+              <div className="mt-3 pt-3 border-t border-black/10">
+                <p className="text-xs text-gray-500 font-medium uppercase mb-1">Reference Answer</p>
+                <div className="text-sm text-gray-800 bg-gray-50 p-3 rounded-lg border border-gray-200">
+                  <MarkdownContent content={currentQuestion.writtenAnswerReference || ""} />
+                </div>
+              </div>
             </div>
           )}
 
@@ -373,8 +566,8 @@ export default function QuizUI({ questions, apiKey, onExit }: QuizUIProps) {
       <div className="mt-8 flex justify-end items-center gap-3">
         {!isSubmitted ? (
           <button
-            onClick={answerMode === "multiple-choice" ? handleSubmitOptions : handleSubmitWritten}
-            disabled={answerMode === "multiple-choice" ? selectedOption === null : !writtenInput.trim()}
+            onClick={handleSubmit}
+            disabled={isSubmitDisabled()}
             className="px-6 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium disabled:opacity-50"
           >
             Submit Answer
@@ -390,11 +583,12 @@ export default function QuizUI({ questions, apiKey, onExit }: QuizUIProps) {
               </button>
             )}
             <div className="flex items-center gap-3">
-              {gradingResult && gradingResult.score < 80 && (
+              {((gradingResult && gradingResult.score < 80) || (codingResult && overallCodingScore < 80)) && (
                 <button
                   onClick={() => {
                     setIsSubmitted(false);
                     setGradingResult(null);
+                    setCodingResult(null);
                     setExampleResult(null);
                     setAiExample(null);
                   }}

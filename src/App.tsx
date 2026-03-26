@@ -32,6 +32,7 @@ const COMPLEXITY_OPTIONS: { value: QuestionComplexity; label: string; desc: stri
   { value: "brief", label: "Brief, Core Idea", desc: "Short, focused questions testing key concepts" },
   { value: "elaborate", label: "Elaborate Answers", desc: "Detailed answer choices for deeper learning" },
   { value: "practical", label: "Practical Application", desc: "Real-world scenario & application questions" },
+  { value: "coding problem", label: "Coding Problem", desc: "Technical challenges and coding problems" },
 ];
 
 function App() {
