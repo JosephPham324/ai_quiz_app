@@ -5,17 +5,20 @@ A modern, AI-powered quiz application that transforms your study materials into 
 ## 🚀 Key Features
 
 - **Multi-Format Knowledge Upload**: Support for `.md`, `.txt`, and `.docx` files.
-- **Intelligent Question Generation**: Automatically generates high-quality multiple-choice and written questions using OpenAI's latest models.
+- **Intelligent Question Generation**: Automatically generate high-quality multiple-choice, written, and coding questions. Configure question complexity (brief, elaborate, practical, coding) and select your preferred AI model.
 - **Advanced Grading Modes**: 
   - **Strict Match**: For precise terminology and definitions.
   - **AI Evaluator**: Uses GPT to understand context and nuance in written responses.
+  - **Code Evaluator**: Built-in code editor that evaluates both programming logic and written rationale.
 - **Practical Application Learning**:
   - **Practical Example Mode**: Input your own real-world scenarios to see how theory applies in practice.
-  - **AI-Generated Case Studies**: Click "Provide Example" to get a beautifully rendered markdown example (including code blocks) tailored to the question.
+  - **AI-Generated Case Studies**: Experience beautifully rendered markdown examples (including language-specific code blocks) tailored to the question.
+- **Customizable Quiz Sessions & Source Tracking**:
+  - Configure quiz length, per-file question limits, and scrambling.
+  - Track question origins with colored source badges and legends.
 - **Question Bank Management**:
   - Export your generated questions to CSV.
   - Import existing question banks.
-  - Shuffle and clear functionality for endless practice.
 - **Premium UI/UX**: Built with a sleek, responsive design featuring glassmorphism, smooth transitions, and rich typography.
 
 ## 🛠️ Tech Stack
@@ -23,7 +26,7 @@ A modern, AI-powered quiz application that transforms your study materials into 
 - **Core**: [React 19](https://react.dev/), [Vite](https://vitejs.dev/)
 - **Language**: [TypeScript](https://www.typescriptlang.org/)
 - **Styling**: [Tailwind CSS v4](https://tailwindcss.com/) (with [Typography plugin](https://github.com/tailwindlabs/tailwindcss-typography))
-- **AI Integration**: [OpenAI API](https://openai.com/) (gpt-4.1-nano)
+- **AI Integration**: [OpenAI API](https://openai.com/) (Support for various models via selector)
 - **Icons**: [Lucide React](https://lucide.dev/)
 - **Parsing Libraries**:
   - [PapaParse](https://www.papaparse.com/) (CSV)
@@ -32,7 +35,7 @@ A modern, AI-powered quiz application that transforms your study materials into 
 
 ## 📺 Demo
 
-*[Placeholder for Demo Video - You can insert your recorded demo video here or embed a YouTube link]*
+*[Placeholder for Demo Video]*
 
 > [!TIP]
 > You can try importing the `sample_questions.csv` included in the repository for a quick demo of the quiz interface!
