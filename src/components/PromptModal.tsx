@@ -26,6 +26,7 @@ export default function PromptModal({ complexity, onClose }: PromptModalProps) {
     elaborate: "Elaborate Answers",
     practical: "Practical Application",
     "coding problem": "Coding Problem",
+    "custom" : "Custom prompt"
   }[complexity] ?? complexity;
 
   return (
