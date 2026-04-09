@@ -33,7 +33,7 @@ export interface QuestionBank {
   createdAt: number;
 }
 
-export type QuestionComplexity = 'brief' | 'elaborate' | 'practical' | 'coding problem';
+export type QuestionComplexity = 'brief' | 'elaborate' | 'practical' | 'coding problem' | 'custom';
 
 export interface ModelOption {
   id: string;
@@ -45,4 +45,5 @@ export interface ModelOption {
 export interface GenerationOptions {
   model: string;
   complexity: QuestionComplexity;
+  customPrompt?: string;
 }

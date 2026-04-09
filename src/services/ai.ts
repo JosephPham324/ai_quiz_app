@@ -1,6 +1,6 @@
 import type { Question, EvaluationResult, CodingGradingResult, GenerationOptions } from "../types";
 
-const BASE_JSON_FORMAT = `
+export const BASE_JSON_FORMAT = `
 Each question MUST follow this JSON structure:
 {
   "questions": [
@@ -18,7 +18,7 @@ Return ONLY the JSON object, without any markdown formatting.
 The question and answer language must match the language of the input text.
 `;
 
-const COMPLEXITY_PROMPTS: Record<string, string> = {
+export const COMPLEXITY_PROMPTS: Record<string, string> = {
   brief: `You are an expert quiz generator. Analyze the provided text and generate concise questions that test core ideas and key concepts. Keep question text short and focused. Answer options should be brief and to the point. Written answer references should be concise summaries of the main idea.`,
   elaborate: `You are an expert quiz generator. Analyze the provided text and generate in-depth questions with detailed, longer answer choices. Each multiple-choice option should be a thorough explanation (1-2 sentences each) so the learner gains knowledge even by reading the options. Written answer references should be comprehensive and cover nuances.`,
   practical: `You are an expert quiz generator. Analyze the provided text and generate questions about PRACTICAL APPLICATIONS of the concepts described. Instead of asking what the text says, ask how these concepts would be applied in real-world scenarios, problem-solving situations, or practical use cases (preferably coding scenarios with actual code). Written answer references should describe practical implementations OR direct code examples if the question is code-related or database-related.`,
@@ -37,7 +37,34 @@ Ensure you generate 3-5 high-quality questions per chunk of context.`;
 export async function generateQuestionsChunk(text: string, apiKey: string, options?: GenerationOptions): Promise<Question[]> {
   const model = options?.model || "gpt-4.1-nano";
   const complexity = options?.complexity || "brief";
-  const systemPrompt = buildSystemPrompt(complexity);
+
+  let messages: { role: string; content: string }[];
+
+  if (complexity === "custom" && options?.customPrompt) {
+    const customPrompt = options.customPrompt;
+    // Always append JSON format instructions ensuring we can parse the output
+    const jsonReminder = `\n\nIMPORTANT: Strictly output ONLY a valid JSON object.\n${BASE_JSON_FORMAT}Ensure you generate 3-5 high-quality questions per chunk of context.`;
+
+    if (customPrompt.includes("{content}")) {
+      // User wants content injected inline — send as a single user message
+      const injected = customPrompt.replace("{content}", text) + jsonReminder;
+      messages = [
+        { role: "user", content: injected },
+      ];
+    } else {
+      // Use custom prompt as system, content as user message
+      messages = [
+        { role: "system", content: customPrompt + jsonReminder },
+        { role: "user", content: `Generate questions from the following text:\n\n${text}` },
+      ];
+    }
+  } else {
+    const systemPrompt = buildSystemPrompt(complexity);
+    messages = [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: `Generate questions from the following text:\n\n${text}` },
+    ];
+  }
 
   const response = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
@@ -47,10 +74,7 @@ export async function generateQuestionsChunk(text: string, apiKey: string, optio
     },
     body: JSON.stringify({
       model,
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: `Generate questions from the following text:\n\n${text}` },
-      ],
+      messages,
       temperature: 0.7,
       response_format: { type: "json_object" },
     }),

@@ -1,12 +1,13 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { Settings, BookOpen, Loader2, ChevronDown } from "lucide-react";
+import { Settings, BookOpen, Loader2, ChevronDown, Eye } from "lucide-react";
 import SettingsModal from "./components/SettingsModal";
 import FileUploader from "./components/FileUploader";
 import QuestionBankViewer from "./components/QuestionBankViewer";
 import QuizConfigModal from "./components/QuizConfigModal";
 import QuizUI from "./components/QuizUI";
+import PromptModal from "./components/PromptModal";
 import type { Question, QuestionComplexity, ModelOption, QuizConfig } from "./types";
-import { generateQuestionsChunk } from "./services/ai";
+import { generateQuestionsChunk, COMPLEXITY_PROMPTS } from "./services/ai";
 
 const MODEL_OPTIONS: ModelOption[] = [
   { id: "gpt-4.1-nano", name: "GPT-4.1 Nano", inputCost: "$0.10", outputCost: "$0.40" },
@@ -33,6 +34,7 @@ const COMPLEXITY_OPTIONS: { value: QuestionComplexity; label: string; desc: stri
   { value: "elaborate", label: "Elaborate Answers", desc: "Detailed answer choices for deeper learning" },
   { value: "practical", label: "Practical Application", desc: "Real-world scenario & application questions" },
   { value: "coding problem", label: "Coding Problem", desc: "Technical challenges and coding problems" },
+  { value: "custom", label: "Custom Prompt", desc: "Write your own generation instructions with {content} injection" },
 ];
 
 function App() {
@@ -52,6 +54,8 @@ function App() {
   const [selectedModelId, setSelectedModelId] = useState("gpt-4.1-nano");
   const [useCustomModel, setUseCustomModel] = useState(false);
   const [customModelName, setCustomModelName] = useState("");
+  const [customPrompt, setCustomPrompt] = useState("");
+  const [previewComplexity, setPreviewComplexity] = useState<QuestionComplexity | null>(null);
 
   useEffect(() => {
     const key = localStorage.getItem("openai_api_key");
@@ -91,7 +95,7 @@ function App() {
       chunks.push(content.substring(i, i + chunkSize));
     }
 
-    const options = { model: activeModel || "gpt-4.1-nano", complexity };
+    const options = { model: activeModel || "gpt-4.1-nano", complexity, customPrompt: complexity === "custom" ? customPrompt : undefined };
 
     try {
       const newQuestions: Question[] = [];
@@ -218,29 +222,72 @@ function App() {
                   <label className="block text-sm font-medium text-gray-700 mb-2">Question Complexity</label>
                   <div className="space-y-2">
                     {COMPLEXITY_OPTIONS.map((opt) => (
-                      <label
+                      <div
                         key={opt.value}
-                        className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
+                        className={`flex items-center gap-3 p-3 rounded-lg border transition-all ${
                           complexity === opt.value
                             ? "border-indigo-500 bg-indigo-50 shadow-sm"
                             : "border-gray-200 hover:border-indigo-300 hover:bg-gray-50"
                         }`}
                       >
-                        <input
-                          type="radio"
-                          name="complexity"
-                          value={opt.value}
-                          checked={complexity === opt.value}
-                          onChange={() => setComplexity(opt.value)}
-                          className="mt-0.5 w-4 h-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"
-                        />
-                        <div>
-                          <span className="text-sm font-medium text-gray-900">{opt.label}</span>
-                          <p className="text-xs text-gray-500 mt-0.5">{opt.desc}</p>
-                        </div>
-                      </label>
+                        <label className="flex items-start gap-3 flex-1 cursor-pointer">
+                          <input
+                            type="radio"
+                            name="complexity"
+                            value={opt.value}
+                            checked={complexity === opt.value}
+                            onChange={() => setComplexity(opt.value)}
+                            className="mt-0.5 w-4 h-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"
+                          />
+                          <div>
+                            <span className="text-sm font-medium text-gray-900">{opt.label}</span>
+                            <p className="text-xs text-gray-500 mt-0.5">{opt.desc}</p>
+                          </div>
+                        </label>
+                        {opt.value !== "custom" && (
+                          <button
+                            type="button"
+                            onClick={() => setPreviewComplexity(opt.value)}
+                            title="Preview prompt"
+                            className="ml-auto shrink-0 p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
                     ))}
                   </div>
+
+                  {/* Custom Prompt Textarea */}
+                  {complexity === "custom" && (
+                    <div className="mt-4 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-semibold text-gray-600">Your Prompt</label>
+                        <div className="flex gap-2">
+                          {Object.entries(COMPLEXITY_PROMPTS).map(([key, val]) => (
+                            <button
+                              key={key}
+                              type="button"
+                              onClick={() => setCustomPrompt(val + "\n\n{content}")}
+                              className="text-xs px-2 py-1 rounded border border-gray-200 text-gray-500 hover:border-indigo-400 hover:text-indigo-600 transition-colors capitalize"
+                            >
+                              {key}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <textarea
+                        value={customPrompt}
+                        onChange={(e) => setCustomPrompt(e.target.value)}
+                        rows={8}
+                        placeholder={`Write your custom generation instructions here.\n\nUse {content} to inject the source text at a specific location. If omitted, the content is sent as a separate message.\n\nExample:\n"You are an expert quiz maker. Read the following content:\n{content}\nGenerate 5 questions focusing on key definitions."`}
+                        className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-sm text-gray-800 font-mono leading-relaxed outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 resize-y"
+                      />
+                      <p className="text-xs text-gray-400">
+                        <span className="font-mono bg-gray-100 px-1 py-0.5 rounded text-gray-600">{'{content}'}</span> will be replaced with each chunk of your document. JSON output format instructions are always appended automatically.
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 {/* API Model Selection */}
@@ -310,6 +357,9 @@ function App() {
           onStart={handleStartQuizWithConfig}
           onClose={() => setIsConfigModalOpen(false)}
         />
+      )}
+      {previewComplexity && (
+        <PromptModal complexity={previewComplexity} onClose={() => setPreviewComplexity(null)} />
       )}
     </div>
   );
