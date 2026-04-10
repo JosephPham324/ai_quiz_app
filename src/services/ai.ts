@@ -213,6 +213,56 @@ export async function generateAIExample(
   return { example: content || "No example generated." };
 }
 
+export async function extractTextFromImages(
+  base64Images: string[], // array of base64 data URLs (e.g. "data:image/png;base64,...")
+  apiKey: string,
+  model: string = "gpt-4o",
+): Promise<string> {
+  // Build the image content parts
+  const imageContent: { type: string; image_url?: { url: string }; text?: string }[] = base64Images.map((dataUrl) => ({
+    type: "image_url",
+    image_url: { url: dataUrl },
+  }));
+
+  // Prepend a text instruction
+  imageContent.unshift({
+    type: "text",
+    text: "Extract all text from the provided image(s) faithfully. Preserve structure, headings, bullet points, tables, and formatting as best as possible in plain text. Output ONLY the extracted text — no commentary, labels, or explanations.",
+  });
+
+  const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model,
+      messages: [
+        {
+          role: "system",
+          content:
+            "You are an expert document reader with perfect OCR ability. Your only task is to faithfully transcribe all visible text from images. Preserve the original structure and formatting. Do not summarize, interpret, or add any extra content.",
+        },
+        {
+          role: "user",
+          content: imageContent,
+        },
+      ],
+      temperature: 0.0,
+      max_tokens: 4096,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.text();
+    throw new Error(`OpenAI API Error: ${response.statusText} - ${errorBody}`);
+  }
+
+  const data = await response.json();
+  return data.choices[0].message.content as string;
+}
+
 export async function gradeCodingAnswer(
   question: string,
   reference: string,

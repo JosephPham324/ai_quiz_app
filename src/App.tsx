@@ -6,8 +6,9 @@ import QuestionBankViewer from "./components/QuestionBankViewer";
 import QuizConfigModal from "./components/QuizConfigModal";
 import QuizUI from "./components/QuizUI";
 import PromptModal from "./components/PromptModal";
+import ImageTextReviewModal from "./components/ImageTextReviewModal";
 import type { Question, QuestionComplexity, ModelOption, QuizConfig } from "./types";
-import { generateQuestionsChunk, COMPLEXITY_PROMPTS } from "./services/ai";
+import { generateQuestionsChunk, extractTextFromImages, COMPLEXITY_PROMPTS } from "./services/ai";
 
 const MODEL_OPTIONS: ModelOption[] = [
   { id: "gpt-4.1-nano", name: "GPT-4.1 Nano", inputCost: "$0.10", outputCost: "$0.40" },
@@ -52,10 +53,21 @@ function App() {
   // Generation options state
   const [complexity, setComplexity] = useState<QuestionComplexity>("brief");
   const [selectedModelId, setSelectedModelId] = useState("gpt-4.1-nano");
+  const [visionModelId, setVisionModelId] = useState("gpt-4o");
   const [useCustomModel, setUseCustomModel] = useState(false);
   const [customModelName, setCustomModelName] = useState("");
   const [customPrompt, setCustomPrompt] = useState("");
   const [previewComplexity, setPreviewComplexity] = useState<QuestionComplexity | null>(null);
+
+  // Image/PDF extraction review state
+  const [imageReviewState, setImageReviewState] = useState<{
+    filename: string;
+    pageCount: number;
+    isLoading: boolean;
+    error: string | null;
+    extractedText: string;
+    base64Images: string[];
+  } | null>(null);
 
   useEffect(() => {
     const key = localStorage.getItem("openai_api_key");
@@ -79,6 +91,24 @@ function App() {
     questions.forEach((q) => { if (q.sourceFile) files.add(q.sourceFile); });
     return Array.from(files);
   }, [questions]);
+
+  const handleImagesExtracted = async (base64Images: string[], filename: string, pageCount: number) => {
+    if (!apiKey) {
+      setIsSettingsOpen(true);
+      return;
+    }
+
+    // Open the review modal in loading state
+    setImageReviewState({ filename, pageCount, isLoading: true, error: null, extractedText: "", base64Images });
+
+    try {
+      const text = await extractTextFromImages(base64Images, apiKey, visionModelId);
+      setImageReviewState((prev) => prev ? { ...prev, isLoading: false, extractedText: text } : null);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Extraction failed";
+      setImageReviewState((prev) => prev ? { ...prev, isLoading: false, error: message } : null);
+    }
+  };
 
   const handleContentExtracted = async (content: string, filename: string) => {
     if (!apiKey) {
@@ -120,6 +150,26 @@ function App() {
       setIsGenerating(false);
     }
   };
+
+  const handleImageTextDownload = () => {
+    if (!imageReviewState) return;
+    const blob = new Blob([imageReviewState.extractedText], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = imageReviewState.filename.replace(/\.[^.]+$/, "") + "_extracted.txt";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImageTextSubmit = () => {
+    if (!imageReviewState) return;
+    const { extractedText, filename } = imageReviewState;
+    setImageReviewState(null);
+    handleContentExtracted(extractedText, filename);
+  };
+
+
 
   const handleStartQuizWithConfig = useCallback((config: QuizConfig) => {
     let selected: Question[] = [];
@@ -197,7 +247,10 @@ function App() {
             <div className="lg:col-span-5 space-y-6">
               <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
                 <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">1. Upload Knowledge</h2>
-                <FileUploader onContentExtracted={handleContentExtracted} />
+                <FileUploader
+                  onContentExtracted={handleContentExtracted}
+                  onImagesExtracted={handleImagesExtracted}
+                />
 
                 {isGenerating && (
                   <div className="mt-6 p-4 bg-indigo-50 rounded-lg border border-indigo-100">
@@ -290,12 +343,14 @@ function App() {
                   )}
                 </div>
 
-                {/* API Model Selection */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">API Model</label>
+                {/* Models Section */}
+                <div className="space-y-6">
+                  {/* API Model Selection */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Text Generation Model</label>
 
-                  <div className="flex items-center gap-3 mb-3">
-                    <label className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm font-medium cursor-pointer transition-all ${!useCustomModel ? "border-indigo-500 bg-indigo-50 text-indigo-700" : "border-gray-200 text-gray-600 hover:border-indigo-300"}`}>
+                    <div className="flex items-center gap-3 mb-3">
+                      <label className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm font-medium cursor-pointer transition-all ${!useCustomModel ? "border-indigo-500 bg-indigo-50 text-indigo-700" : "border-gray-200 text-gray-600 hover:border-indigo-300"}`}>
                       <input type="radio" name="modelMode" checked={!useCustomModel} onChange={() => setUseCustomModel(false)} className="sr-only" />
                       Select from list
                     </label>
@@ -333,6 +388,26 @@ function App() {
                   {!useCustomModel && (
                     <p className="text-xs text-gray-400 mt-2">Prices per 1M tokens. Costs shown are for standard input / output.</p>
                   )}
+                  </div>
+
+                  {/* Vision Model Selection */}
+                  <div className="pt-6 border-t border-gray-100">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Vision Model (Image/PDF Extraction)</label>
+                    <div className="relative">
+                      <select
+                        value={visionModelId}
+                        onChange={(e) => setVisionModelId(e.target.value)}
+                        className="w-full appearance-none bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 pr-10 text-sm font-medium text-gray-800 outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                      >
+                        {MODEL_OPTIONS.map((m) => (
+                          <option key={m.id} value={m.id}>
+                            {m.name}
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown className="w-4 h-4 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -360,6 +435,19 @@ function App() {
       )}
       {previewComplexity && (
         <PromptModal complexity={previewComplexity} onClose={() => setPreviewComplexity(null)} />
+      )}
+      {imageReviewState && (
+        <ImageTextReviewModal
+          filename={imageReviewState.filename}
+          pageCount={imageReviewState.pageCount}
+          isLoading={imageReviewState.isLoading}
+          error={imageReviewState.error}
+          extractedText={imageReviewState.extractedText}
+          onTextChange={(text) => setImageReviewState((prev) => prev ? { ...prev, extractedText: text } : null)}
+          onDownload={handleImageTextDownload}
+          onSubmit={handleImageTextSubmit}
+          onClose={() => setImageReviewState(null)}
+        />
       )}
     </div>
   );
