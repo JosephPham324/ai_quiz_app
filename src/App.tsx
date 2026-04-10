@@ -9,6 +9,7 @@ import PromptModal from "./components/PromptModal";
 import ImageTextReviewModal from "./components/ImageTextReviewModal";
 import type { Question, QuestionComplexity, ModelOption, QuizConfig } from "./types";
 import { generateQuestionsChunk, extractTextFromImages, COMPLEXITY_PROMPTS } from "./services/ai";
+import { useLanguage } from "./contexts/LanguageContext";
 
 const MODEL_OPTIONS: ModelOption[] = [
   { id: "gpt-4.1-nano", name: "GPT-4.1 Nano", inputCost: "$0.10", outputCost: "$0.40" },
@@ -30,15 +31,17 @@ const MODEL_OPTIONS: ModelOption[] = [
   { id: "o4-mini", name: "o4-mini", inputCost: "$1.10", outputCost: "$4.40" },
 ];
 
-const COMPLEXITY_OPTIONS: { value: QuestionComplexity; label: string; desc: string }[] = [
-  { value: "brief", label: "Brief, Core Idea", desc: "Short, focused questions testing key concepts" },
-  { value: "elaborate", label: "Elaborate Answers", desc: "Detailed answer choices for deeper learning" },
-  { value: "practical", label: "Practical Application", desc: "Real-world scenario & application questions" },
-  { value: "coding problem", label: "Coding Problem", desc: "Technical challenges and coding problems" },
-  { value: "custom", label: "Custom Prompt", desc: "Write your own generation instructions with {content} injection" },
-];
-
 function App() {
+  const { t } = useLanguage();
+
+  const COMPLEXITY_OPTIONS = useMemo<{ value: QuestionComplexity; label: string; desc: string }[]>(() => [
+    { value: "brief", label: t.app.briefLabel, desc: t.app.briefDesc },
+    { value: "elaborate", label: t.app.elaborateLabel, desc: t.app.elaborateDesc },
+    { value: "practical", label: t.app.practicalLabel, desc: t.app.practicalDesc },
+    { value: "coding problem", label: t.app.codingLabel, desc: t.app.codingDesc },
+    { value: "custom", label: t.app.customLabel, desc: t.app.customDesc },
+  ], [t]);
+
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [apiKey, setApiKey] = useState("");
 
@@ -212,7 +215,7 @@ function App() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <BookOpen className="w-6 h-6 text-indigo-600" />
-            <h1 className="text-xl font-bold text-gray-900 tracking-tight">AI Quiz Generator</h1>
+            <h1 className="text-xl font-bold text-gray-900 tracking-tight">{t.app.title}</h1>
           </div>
           <button
             onClick={() => setIsSettingsOpen(true)}
@@ -230,23 +233,22 @@ function App() {
             <div className="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-6">
               <Settings className="w-8 h-8" />
             </div>
-            <h2 className="text-2xl font-semibold text-gray-900 mb-3">Welcome to AI Quiz Generator</h2>
+            <h2 className="text-2xl font-semibold text-gray-900 mb-3">{t.app.welcome}</h2>
             <p className="text-gray-500 mb-8 max-w-md mx-auto">
-              To get started, please configure your OpenAI API key. This key is stored securely in your browser and used to generate intelligent
-              questions.
+              {t.app.welcomeDesc}
             </p>
             <button
               onClick={() => setIsSettingsOpen(true)}
               className="inline-flex items-center px-6 py-3 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 transition-colors"
             >
-              Configure API Key
+              {t.app.configKey}
             </button>
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
             <div className="lg:col-span-5 space-y-6">
               <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">1. Upload Knowledge</h2>
+                <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">{t.app.uploadStep}</h2>
                 <FileUploader
                   onContentExtracted={handleContentExtracted}
                   onImagesExtracted={handleImagesExtracted}
@@ -256,23 +258,23 @@ function App() {
                   <div className="mt-6 p-4 bg-indigo-50 rounded-lg border border-indigo-100">
                     <div className="flex items-center gap-3 text-indigo-700 font-medium mb-2">
                       <Loader2 className="w-5 h-5 animate-spin" />
-                      Analyzing content with AI...
+                      {t.app.analyzing}
                     </div>
                     <div className="w-full bg-indigo-200 rounded-full h-2.5">
                       <div className="bg-indigo-600 h-2.5 rounded-full transition-all duration-300" style={{ width: `${generationProgress}%` }}></div>
                     </div>
-                    <p className="text-right text-xs text-indigo-600 mt-1">{generationProgress}% complete</p>
+                    <p className="text-right text-xs text-indigo-600 mt-1">{generationProgress}% {t.app.complete}</p>
                   </div>
                 )}
               </div>
 
               {/* Generation Options */}
               <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">Generation Options</h2>
+                <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">{t.app.generationOptions}</h2>
 
                 {/* Question Complexity */}
                 <div className="mb-6">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Question Complexity</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">{t.app.questionComplexity}</label>
                   <div className="space-y-2">
                     {COMPLEXITY_OPTIONS.map((opt) => (
                       <div
@@ -315,7 +317,7 @@ function App() {
                   {complexity === "custom" && (
                     <div className="mt-4 space-y-2">
                       <div className="flex items-center justify-between">
-                        <label className="text-xs font-semibold text-gray-600">Your Prompt</label>
+                        <label className="text-xs font-semibold text-gray-600">{t.app.yourPrompt}</label>
                         <div className="flex gap-2">
                           {Object.entries(COMPLEXITY_PROMPTS).map(([key, val]) => (
                             <button
@@ -333,11 +335,11 @@ function App() {
                         value={customPrompt}
                         onChange={(e) => setCustomPrompt(e.target.value)}
                         rows={8}
-                        placeholder={`Write your custom generation instructions here.\n\nUse {content} to inject the source text at a specific location. If omitted, the content is sent as a separate message.\n\nExample:\n"You are an expert quiz maker. Read the following content:\n{content}\nGenerate 5 questions focusing on key definitions."`}
+                        placeholder={t.app.promptPlaceholder}
                         className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-sm text-gray-800 font-mono leading-relaxed outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 resize-y"
                       />
                       <p className="text-xs text-gray-400">
-                        <span className="font-mono bg-gray-100 px-1 py-0.5 rounded text-gray-600">{'{content}'}</span> will be replaced with each chunk of your document. JSON output format instructions are always appended automatically.
+                        <span className="font-mono bg-gray-100 px-1 py-0.5 rounded text-gray-600">{'{content}'}</span> {t.app.promptHelp}
                       </p>
                     </div>
                   )}
@@ -347,16 +349,16 @@ function App() {
                 <div className="space-y-6">
                   {/* API Model Selection */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Text Generation Model</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">{t.app.textModel}</label>
 
                     <div className="flex items-center gap-3 mb-3">
                       <label className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm font-medium cursor-pointer transition-all ${!useCustomModel ? "border-indigo-500 bg-indigo-50 text-indigo-700" : "border-gray-200 text-gray-600 hover:border-indigo-300"}`}>
                       <input type="radio" name="modelMode" checked={!useCustomModel} onChange={() => setUseCustomModel(false)} className="sr-only" />
-                      Select from list
+                      {t.app.selectList}
                     </label>
                     <label className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm font-medium cursor-pointer transition-all ${useCustomModel ? "border-indigo-500 bg-indigo-50 text-indigo-700" : "border-gray-200 text-gray-600 hover:border-indigo-300"}`}>
                       <input type="radio" name="modelMode" checked={useCustomModel} onChange={() => setUseCustomModel(true)} className="sr-only" />
-                      Custom model
+                      {t.app.customModel}
                     </label>
                   </div>
 
@@ -386,13 +388,13 @@ function App() {
                   )}
 
                   {!useCustomModel && (
-                    <p className="text-xs text-gray-400 mt-2">Prices per 1M tokens. Costs shown are for standard input / output.</p>
+                    <p className="text-xs text-gray-400 mt-2">{t.app.pricesNote}</p>
                   )}
                   </div>
 
                   {/* Vision Model Selection */}
                   <div className="pt-6 border-t border-gray-100">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Vision Model (Image/PDF Extraction)</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">{t.app.visionModel}</label>
                     <div className="relative">
                       <select
                         value={visionModelId}

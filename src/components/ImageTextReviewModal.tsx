@@ -1,4 +1,5 @@
 import { X, Download, Sparkles, Loader2, FileText, AlertCircle } from "lucide-react";
+import { useLanguage } from "../contexts/LanguageContext";
 
 interface ImageTextReviewModalProps {
   filename: string;
@@ -23,6 +24,7 @@ export default function ImageTextReviewModal({
   onSubmit,
   onClose,
 }: ImageTextReviewModalProps) {
+  const { t } = useLanguage();
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col">
@@ -34,10 +36,10 @@ export default function ImageTextReviewModal({
               <FileText className="w-5 h-5 text-indigo-600" />
             </div>
             <div>
-              <h2 className="text-base font-semibold text-gray-900">AI Text Extraction</h2>
+              <h2 className="text-base font-semibold text-gray-900">{t.imageReview.title}</h2>
               <p className="text-xs text-gray-500 mt-0.5">
                 <span className="font-medium text-gray-700">{filename}</span>
-                {pageCount > 1 && <span className="ml-1">· {pageCount} page{pageCount !== 1 ? "s" : ""}</span>}
+                {pageCount > 1 && <span className="ml-1">· {pageCount} {t.imageReview.pages}</span>}
               </p>
             </div>
           </div>
@@ -59,15 +61,15 @@ export default function ImageTextReviewModal({
                 </div>
               </div>
               <div>
-                <p className="text-sm font-semibold text-gray-800">AI is reading your document…</p>
-                <p className="text-xs text-gray-400 mt-1">Extracting text from {pageCount > 1 ? `${pageCount} pages` : "image"}</p>
+                <p className="text-sm font-semibold text-gray-800">{t.imageReview.readingDoc}</p>
+                <p className="text-xs text-gray-400 mt-1">{t.imageReview.extractingFrom} {pageCount > 1 ? `${pageCount} ${t.imageReview.pages}` : t.imageReview.image}</p>
               </div>
             </div>
           ) : error ? (
             <div className="flex items-start gap-3 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700">
               <AlertCircle className="w-5 h-5 mt-0.5 shrink-0" />
               <div>
-                <p className="text-sm font-semibold">Extraction failed</p>
+                <p className="text-sm font-semibold">{t.imageReview.failedTitle}</p>
                 <p className="text-xs mt-0.5">{error}</p>
               </div>
             </div>
@@ -75,10 +77,10 @@ export default function ImageTextReviewModal({
             <>
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold uppercase tracking-wider text-gray-400">
-                  Extracted Text
+                  {t.imageReview.extractedTextLabel}
                 </span>
                 <span className="text-xs text-gray-400">
-                  Review and edit before using — fix any OCR errors
+                  {t.imageReview.reviewHint}
                 </span>
               </div>
               <textarea
@@ -86,16 +88,15 @@ export default function ImageTextReviewModal({
                 onChange={(e) => onTextChange(e.target.value)}
                 rows={16}
                 className="w-full flex-1 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 leading-relaxed outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 resize-y font-mono"
-                placeholder="Extracted text will appear here…"
+                placeholder={t.imageReview.placeholder}
               />
               <p className="text-xs text-gray-400">
-                You can edit the text above to correct any extraction errors before generating questions.
+                {t.imageReview.editHint}
               </p>
             </>
           )}
         </div>
 
-        {/* Footer */}
         <div className="px-6 py-4 border-t border-gray-200 shrink-0 flex flex-col sm:flex-row gap-3">
           <button
             onClick={onDownload}
@@ -103,7 +104,7 @@ export default function ImageTextReviewModal({
             className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <Download className="w-4 h-4" />
-            Download as .txt
+            {t.imageReview.download}
           </button>
           <button
             onClick={onSubmit}
@@ -111,7 +112,7 @@ export default function ImageTextReviewModal({
             className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <Sparkles className="w-4 h-4" />
-            Use for Quiz Generation
+            {t.imageReview.useForQuiz}
           </button>
         </div>
       </div>

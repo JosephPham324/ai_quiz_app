@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { X, Play, Shuffle, FileText, Hash } from "lucide-react";
 import type { QuizConfig } from "../types";
+import { useLanguage } from "../contexts/LanguageContext";
 
 interface QuizConfigModalProps {
   totalAvailable: number;
@@ -13,6 +14,7 @@ export default function QuizConfigModal({ totalAvailable, sourceFiles, onStart, 
   const [totalQuestions, setTotalQuestions] = useState(totalAvailable);
   const [questionsPerFile, setQuestionsPerFile] = useState(0); // 0 = no per-file limit
   const [scrambled, setScrambled] = useState(false);
+  const { t } = useLanguage();
 
   const effectiveMax = useMemo(() => {
     if (questionsPerFile > 0 && sourceFiles.length > 0) {
@@ -36,7 +38,7 @@ export default function QuizConfigModal({ totalAvailable, sourceFiles, onStart, 
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-indigo-50 to-purple-50">
           <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
             <Play className="w-5 h-5 text-indigo-600" />
-            Quiz Configuration
+            {t.quizConfig.title}
           </h2>
           <button onClick={onClose} className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-white/60 rounded-lg transition-colors">
             <X className="w-5 h-5" />
@@ -49,7 +51,7 @@ export default function QuizConfigModal({ totalAvailable, sourceFiles, onStart, 
           <div>
             <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
               <Hash className="w-4 h-4 text-indigo-500" />
-              Number of Questions
+              {t.quizConfig.numQuestions}
             </label>
             <div className="flex items-center gap-3">
               <input
@@ -77,7 +79,7 @@ export default function QuizConfigModal({ totalAvailable, sourceFiles, onStart, 
             <div>
               <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
                 <FileText className="w-4 h-4 text-indigo-500" />
-                Questions per Source File
+                {t.quizConfig.perFile}
               </label>
               <div className="flex items-center gap-3">
                 <input
@@ -89,7 +91,7 @@ export default function QuizConfigModal({ totalAvailable, sourceFiles, onStart, 
                   className="w-20 text-center text-sm font-medium border border-gray-200 rounded-lg py-1.5 outline-none focus:ring-2 focus:ring-indigo-500"
                 />
                 <span className="text-xs text-gray-500">
-                  {questionsPerFile === 0 ? "No limit (use all)" : `${questionsPerFile} per file`}
+                  {questionsPerFile === 0 ? t.quizConfig.noLimit : `${questionsPerFile} ${t.quizConfig.perFileLimit}`}
                 </span>
               </div>
               <div className="mt-2 flex flex-wrap gap-1.5">
@@ -106,7 +108,7 @@ export default function QuizConfigModal({ totalAvailable, sourceFiles, onStart, 
           <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-100">
             <div className="flex items-center gap-2">
               <Shuffle className="w-4 h-4 text-indigo-500" />
-              <span className="text-sm font-semibold text-gray-700">Scramble Questions</span>
+              <span className="text-sm font-semibold text-gray-700">{t.quizConfig.scramble}</span>
             </div>
             <button
               onClick={() => setScrambled(!scrambled)}
@@ -125,14 +127,14 @@ export default function QuizConfigModal({ totalAvailable, sourceFiles, onStart, 
             onClick={onClose}
             className="px-5 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
           >
-            Cancel
+            {t.quizConfig.cancel}
           </button>
           <button
             onClick={handleStart}
             className="px-5 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors shadow-sm flex items-center gap-2"
           >
             <Play className="w-4 h-4" />
-            Start Quiz
+            {t.quizConfig.start}
           </button>
         </div>
       </div>

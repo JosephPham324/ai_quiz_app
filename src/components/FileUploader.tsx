@@ -3,6 +3,7 @@ import { UploadCloud, AlertCircle } from 'lucide-react';
 import * as mammoth from 'mammoth';
 import * as pdfjsLib from 'pdfjs-dist';
 import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
+import { useLanguage } from '../contexts/LanguageContext';
 
 // Point the worker to the correct asset URL via Vite
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
@@ -52,6 +53,7 @@ export default function FileUploader({ onContentExtracted, onImagesExtracted }: 
   const [isDragging, setIsDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const { t } = useLanguage();
 
   const processFile = async (file: File) => {
     setError(null);
@@ -67,23 +69,23 @@ export default function FileUploader({ onContentExtracted, onImagesExtracted }: 
         onImagesExtracted([base64], file.name, 1);
       } else if (isPdf) {
         const { images, pageCount } = await pdfToBase64Images(file);
-        if (images.length === 0) throw new Error('No pages could be rendered from this PDF.');
+        if (images.length === 0) throw new Error(t.uploader.errorNoPages);
         onImagesExtracted(images, file.name, pageCount);
       } else if (name.endsWith('.txt') || name.endsWith('.md')) {
         const text = await file.text();
-        if (!text.trim()) throw new Error('The file appears to be empty.');
+        if (!text.trim()) throw new Error(t.uploader.errorEmpty);
         onContentExtracted(text, file.name);
       } else if (name.endsWith('.docx')) {
         const arrayBuffer = await file.arrayBuffer();
         const result = await mammoth.extractRawText({ arrayBuffer });
         const text = result.value;
-        if (!text.trim()) throw new Error('The file appears to be empty.');
+        if (!text.trim()) throw new Error(t.uploader.errorEmpty);
         onContentExtracted(text, file.name);
       } else {
-        throw new Error('Unsupported file type. Please upload .txt, .md, .docx, .pdf, .png, .jpg, .jpeg, .webp, or .gif');
+        throw new Error(t.uploader.errorUnsupported);
       }
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'An error occurred while reading the file.';
+      const message = err instanceof Error ? err.message : t.uploader.errorGeneric;
       setError(message);
     } finally {
       setIsLoading(false);
@@ -117,13 +119,13 @@ export default function FileUploader({ onContentExtracted, onImagesExtracted }: 
           </div>
           <div>
             <p className="text-sm font-medium text-gray-900">
-              Drag and drop your knowledge file here
+              {t.uploader.dragHint}
             </p>
             <p className="text-xs text-gray-500 mt-1">
-              .txt · .md · .docx · .pdf · .png · .jpg · .jpeg · .webp · .gif
+              {t.uploader.extensionsHint}
             </p>
             <p className="text-xs text-gray-400 mt-1">
-              Images &amp; PDFs are extracted via AI Vision — you can review &amp; edit before generating
+              {t.uploader.visionHint}
             </p>
           </div>
 
@@ -140,7 +142,7 @@ export default function FileUploader({ onContentExtracted, onImagesExtracted }: 
               disabled={isLoading}
               className="px-4 py-2 text-sm font-medium text-indigo-600 bg-white border border-indigo-200 rounded-md shadow-sm hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
             >
-              {isLoading ? 'Processing…' : 'Browse Files'}
+              {isLoading ? t.uploader.processing : t.uploader.browse}
             </button>
           </div>
         </div>

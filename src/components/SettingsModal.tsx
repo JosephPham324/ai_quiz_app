@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { X, Key } from 'lucide-react';
+import { X, Key, Globe } from 'lucide-react';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface SettingsModalProps {
   currentKey: string;
@@ -9,6 +10,7 @@ interface SettingsModalProps {
 
 export default function SettingsModal({ currentKey, onSave, onClose }: SettingsModalProps) {
   const [key, setKey] = useState(currentKey);
+  const { language, setLanguage, t } = useLanguage();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,42 +31,56 @@ export default function SettingsModal({ currentKey, onSave, onClose }: SettingsM
           <div className="p-2 bg-indigo-100 text-indigo-600 rounded-lg">
             <Key className="w-5 h-5" />
           </div>
-          <h2 className="text-xl font-semibold text-gray-900">API Settings</h2>
+          <h2 className="text-xl font-semibold text-gray-900">{t.settings.apiSettings}</h2>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-6">
           <div>
             <label htmlFor="apiKey" className="block text-sm font-medium text-gray-700 mb-1">
-              OpenAI API Key
+              {t.settings.apiKeyLabel}
             </label>
             <input
               type="password"
               id="apiKey"
               value={key}
               onChange={(e) => setKey(e.target.value)}
-              placeholder="sk-..."
+              placeholder={t.settings.apiKeyPlaceholder}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-mono text-sm"
               required
             />
             <p className="mt-2 text-xs text-gray-500">
-              Your API key is stored locally in your browser and never sent to our servers.
-              It is used directly to communicate with OpenAI.
+              {t.settings.apiKeyDesc}
             </p>
           </div>
 
-          <div className="flex justify-end gap-3 mt-6">
+          <div>
+            <label htmlFor="language" className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-2">
+              <Globe className="w-4 h-4" /> {t.settings.languageLabel}
+            </label>
+            <select
+              id="language"
+              value={language}
+              onChange={(e) => setLanguage(e.target.value as 'en' | 'vi')}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+            >
+              <option value="en">{t.settings.languageEn}</option>
+              <option value="vi">{t.settings.languageVi}</option>
+            </select>
+          </div>
+
+          <div className="flex justify-end gap-3 mt-8">
             <button
               type="button"
               onClick={onClose}
               className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             >
-              Cancel
+              {t.settings.cancel}
             </button>
             <button
               type="submit"
               className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             >
-              Save Key
+              {t.settings.save}
             </button>
           </div>
         </form>

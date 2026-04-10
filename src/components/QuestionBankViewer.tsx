@@ -2,6 +2,7 @@ import React, { useRef, useMemo } from "react";
 import { Download, Upload, List, Trash2, FileText } from "lucide-react";
 import Papa from "papaparse";
 import type { Question } from "../types";
+import { useLanguage } from "../contexts/LanguageContext";
 
 const SOURCE_COLORS = [
   { bg: "bg-blue-100", text: "text-blue-700", border: "border-blue-200" },
@@ -23,6 +24,7 @@ interface QuestionBankViewerProps {
 
 export default function QuestionBankViewer({ questions, onImported, onStartQuiz, onClear }: QuestionBankViewerProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { t } = useLanguage();
 
   const handleExportCSV = () => {
     if (questions.length === 0) return;
@@ -94,14 +96,14 @@ export default function QuestionBankViewer({ questions, onImported, onStartQuiz,
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-medium flex items-center gap-2">
           <List className="w-5 h-5 text-indigo-500" />
-          Question Bank ({questions.length})
+          {t.questionBank.title} ({questions.length})
         </h2>
         <div className="flex items-center gap-2">
           <input type="file" accept=".csv" ref={fileInputRef} onChange={handleImportCSV} className="hidden" />
           <button
             onClick={() => fileInputRef.current?.click()}
             className="p-2 text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
-            title="Import CSV"
+            title={t.questionBank.importCSV}
           >
             <Upload className="w-4 h-4" />
           </button>
@@ -109,19 +111,19 @@ export default function QuestionBankViewer({ questions, onImported, onStartQuiz,
             onClick={handleExportCSV}
             disabled={questions.length === 0}
             className="p-2 text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors disabled:opacity-50"
-            title="Export CSV"
+            title={t.questionBank.exportCSV}
           >
             <Download className="w-4 h-4" />
           </button>
           <button
             onClick={() => {
-              if (window.confirm("Are you sure you want to clear the question bank?")) {
+              if (window.confirm(t.questionBank.clearConfirm)) {
                 onClear();
               }
             }}
             disabled={questions.length === 0}
             className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded transition-colors disabled:opacity-50"
-            title="Clear Question Bank"
+            title={t.questionBank.clearBank}
           >
             <Trash2 className="w-4 h-4" />
           </button>
@@ -145,7 +147,7 @@ export default function QuestionBankViewer({ questions, onImported, onStartQuiz,
       )}
 
       {questions.length === 0 ? (
-        <div className="text-center py-8 text-gray-500">No questions generated yet. Upload a knowledge file to begin.</div>
+        <div className="text-center py-8 text-gray-500">{t.questionBank.emptyState}</div>
       ) : (
         <div className="space-y-4">
           <div className="max-h-96 overflow-y-auto space-y-3 pr-2">
@@ -173,7 +175,7 @@ export default function QuestionBankViewer({ questions, onImported, onStartQuiz,
               onClick={onStartQuiz}
               className="w-full py-2 px-4 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors font-medium shadow-sm"
             >
-              Start Quiz
+              {t.questionBank.startQuiz}
             </button>
           </div>
         </div>
