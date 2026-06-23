@@ -180,21 +180,27 @@ function App() {
     if (config.questionsPerFile > 0 && sourceFiles.length > 0) {
       // Pick questionsPerFile from each source file
       for (const file of sourceFiles) {
-        const fileQuestions = questions.filter((q) => q.sourceFile === file);
+        let fileQuestions = questions.filter((q) => q.sourceFile === file);
+        if (config.scrambled) {
+          fileQuestions = fileQuestions.sort(() => Math.random() - 0.5);
+        }
         const picked = fileQuestions.slice(0, config.questionsPerFile);
         selected.push(...picked);
       }
     } else {
       selected = [...questions];
+      if (config.scrambled) {
+        selected = selected.sort(() => Math.random() - 0.5);
+      }
+    }
+
+    // Scramble overall to mix questions from different files
+    if (config.scrambled) {
+      selected = selected.sort(() => Math.random() - 0.5);
     }
 
     // Limit to totalQuestions
     selected = selected.slice(0, config.totalQuestions);
-
-    // Scramble if needed
-    if (config.scrambled) {
-      selected = selected.sort(() => Math.random() - 0.5);
-    }
 
     setActiveQuizQuestions(selected);
     setIsConfigModalOpen(false);
