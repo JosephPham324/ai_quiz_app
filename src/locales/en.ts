@@ -25,8 +25,21 @@ export const en = {
     practicalDesc: "Real-world scenario & application questions",
     codingLabel: "Coding Problem",
     codingDesc: "Technical challenges and coding problems",
+    vocabularyLabel: "Language Vocabulary",
+    vocabularyDesc: "Definitions, synonyms, antonyms, and usage of key terms",
     customLabel: "Custom Prompt",
-    customDesc: "Write your own generation instructions with {content} injection"
+    customDesc: "Write your own generation instructions with {content} injection",
+    languageSettings: "Language Settings",
+    questionLanguageLabel: "Question Language",
+    questionLanguageHelp: "The language in which questions and explanations are written (e.g. Vietnamese)",
+    targetLanguageLabel: "Target Learning Language",
+    targetLanguageHelp: "The subject language being tested/learned (e.g. Japanese)",
+    promptInstructionLabel: "Prompt Translation / Custom Instruction",
+    promptInstructionPlaceholder: "e.g. Write all questions and options in Vietnamese asking about Japanese vocabulary and grammar.",
+    promptInstructionHelp: "Overrides default language instructions sent to the AI model.",
+    autoLanguage: "Auto / Same as document",
+    noneLanguage: "None / General Knowledge",
+    customLanguage: "Custom..."
   },
   settings: {
     title: "App Settings",

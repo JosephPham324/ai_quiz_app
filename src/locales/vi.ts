@@ -27,8 +27,21 @@ export const vi: Translation = {
     practicalDesc: "Câu hỏi tình huống & ứng dụng thực tế",
     codingLabel: "Bài Toán Lập Trình",
     codingDesc: "Các thử thách kỹ thuật và lập trình",
+    vocabularyLabel: "Từ Vựng Ngôn Ngữ",
+    vocabularyDesc: "Định nghĩa, từ đồng nghĩa, trái nghĩa và cách dùng từ khóa",
     customLabel: "Prompt Tùy Chỉnh",
-    customDesc: "Viết hướng dẫn của riêng bạn với chèn {content}"
+    customDesc: "Viết hướng dẫn của riêng bạn với chèn {content}",
+    languageSettings: "Cấu Hình Ngôn Ngữ",
+    questionLanguageLabel: "Ngôn Ngữ Câu Hỏi",
+    questionLanguageHelp: "Ngôn ngữ được dùng để viết câu hỏi và lời giải (ví dụ: Tiếng Việt)",
+    targetLanguageLabel: "Ngôn Ngữ Muốn Học",
+    targetLanguageHelp: "Ngôn ngữ/chủ đề đang học/kiểm tra (ví dụ: Tiếng Nhật)",
+    promptInstructionLabel: "Dịch Prompt / Hướng Dẫn Ngôn Ngữ Tùy Chỉnh",
+    promptInstructionPlaceholder: "Ví dụ: Viết tất cả câu hỏi và lựa chọn bằng Tiếng Việt để hỏi về từ vựng và ngữ pháp Tiếng Nhật.",
+    promptInstructionHelp: "Ghi đè hướng dẫn ngôn ngữ mặc định gửi tới mô hình AI.",
+    autoLanguage: "Tự động / Theo tài liệu",
+    noneLanguage: "Không có / Kiến thức chung",
+    customLanguage: "Tùy chọn khác..."
   },
   settings: {
     title: "Cài đặt ứng dụng",

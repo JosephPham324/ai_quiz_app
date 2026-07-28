@@ -7,7 +7,7 @@ import QuizConfigModal from "./components/QuizConfigModal";
 import QuizUI from "./components/QuizUI";
 import PromptModal from "./components/PromptModal";
 import ImageTextReviewModal from "./components/ImageTextReviewModal";
-import type { Question, QuestionComplexity, ModelOption, QuizConfig } from "./types";
+import type { Question, QuestionComplexity, ModelOption, QuizConfig, GenerationOptions } from "./types";
 import { generateQuestionsChunk, extractTextFromImages, COMPLEXITY_PROMPTS } from "./services/ai";
 import { useLanguage } from "./contexts/LanguageContext";
 
@@ -39,6 +39,7 @@ function App() {
     { value: "elaborate", label: t.app.elaborateLabel, desc: t.app.elaborateDesc },
     { value: "practical", label: t.app.practicalLabel, desc: t.app.practicalDesc },
     { value: "coding problem", label: t.app.codingLabel, desc: t.app.codingDesc },
+    { value: "vocabulary", label: t.app.vocabularyLabel, desc: t.app.vocabularyDesc },
     { value: "custom", label: t.app.customLabel, desc: t.app.customDesc },
   ], [t]);
 
@@ -61,6 +62,13 @@ function App() {
   const [customModelName, setCustomModelName] = useState("");
   const [customPrompt, setCustomPrompt] = useState("");
   const [previewComplexity, setPreviewComplexity] = useState<QuestionComplexity | null>(null);
+
+  // Language options state
+  const [questionLanguage, setQuestionLanguage] = useState("Auto");
+  const [customQuestionLang, setCustomQuestionLang] = useState("");
+  const [targetLanguage, setTargetLanguage] = useState("None");
+  const [customTargetLang, setCustomTargetLang] = useState("");
+  const [promptLanguageInstruction, setPromptLanguageInstruction] = useState("");
 
   // Image/PDF extraction review state
   const [imageReviewState, setImageReviewState] = useState<{
@@ -88,6 +96,19 @@ function App() {
   };
 
   const activeModel = useCustomModel ? customModelName.trim() : selectedModelId;
+
+  const currentGenerationOptions = useMemo<GenerationOptions>(() => {
+    const finalQLang = questionLanguage === "Custom" ? customQuestionLang.trim() : questionLanguage;
+    const finalTLang = targetLanguage === "Custom" ? customTargetLang.trim() : targetLanguage;
+    return {
+      model: activeModel || "gpt-4.1-nano",
+      complexity,
+      customPrompt: complexity === "custom" ? customPrompt : undefined,
+      questionLanguage: finalQLang,
+      targetLanguage: finalTLang,
+      promptLanguageInstruction: promptLanguageInstruction.trim() || undefined,
+    };
+  }, [activeModel, complexity, customPrompt, questionLanguage, customQuestionLang, targetLanguage, customTargetLang, promptLanguageInstruction]);
 
   const sourceFiles = useMemo(() => {
     const files = new Set<string>();
@@ -128,7 +149,7 @@ function App() {
       chunks.push(content.substring(i, i + chunkSize));
     }
 
-    const options = { model: activeModel || "gpt-4.1-nano", complexity, customPrompt: complexity === "custom" ? customPrompt : undefined };
+    const options = currentGenerationOptions;
 
     try {
       const newQuestions: Question[] = [];
@@ -351,6 +372,90 @@ function App() {
                   )}
                 </div>
 
+                {/* Language Settings Section */}
+                <div className="pt-6 border-t border-gray-100 mb-6 space-y-4">
+                  <h3 className="text-sm font-semibold text-gray-800 uppercase tracking-wider">{t.app.languageSettings}</h3>
+                  
+                  {/* Question Language */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">{t.app.questionLanguageLabel}</label>
+                    <div className="relative">
+                      <select
+                        value={questionLanguage}
+                        onChange={(e) => setQuestionLanguage(e.target.value)}
+                        className="w-full appearance-none bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 pr-10 text-sm font-medium text-gray-800 outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                      >
+                        <option value="Auto">{t.app.autoLanguage}</option>
+                        <option value="Vietnamese">Vietnamese (Tiếng Việt)</option>
+                        <option value="English">English</option>
+                        <option value="Japanese">Japanese (日本語)</option>
+                        <option value="Spanish">Spanish (Español)</option>
+                        <option value="French">French (Français)</option>
+                        <option value="German">German (Deutsch)</option>
+                        <option value="Chinese">Chinese (中文)</option>
+                        <option value="Custom">{t.app.customLanguage}</option>
+                      </select>
+                      <ChevronDown className="w-4 h-4 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    </div>
+                    {questionLanguage === "Custom" && (
+                      <input
+                        type="text"
+                        value={customQuestionLang}
+                        onChange={(e) => setCustomQuestionLang(e.target.value)}
+                        placeholder="e.g. Italian, Korean..."
+                        className="mt-2 w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                      />
+                    )}
+                    <p className="text-xs text-gray-400 mt-1">{t.app.questionLanguageHelp}</p>
+                  </div>
+
+                  {/* Target Learning Language */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">{t.app.targetLanguageLabel}</label>
+                    <div className="relative">
+                      <select
+                        value={targetLanguage}
+                        onChange={(e) => setTargetLanguage(e.target.value)}
+                        className="w-full appearance-none bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 pr-10 text-sm font-medium text-gray-800 outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                      >
+                        <option value="None">{t.app.noneLanguage}</option>
+                        <option value="Japanese">Japanese (日本語)</option>
+                        <option value="English">English</option>
+                        <option value="Vietnamese">Vietnamese (Tiếng Việt)</option>
+                        <option value="French">French (Français)</option>
+                        <option value="Spanish">Spanish (Español)</option>
+                        <option value="German">German (Deutsch)</option>
+                        <option value="Chinese">Chinese (中文)</option>
+                        <option value="Custom">{t.app.customLanguage}</option>
+                      </select>
+                      <ChevronDown className="w-4 h-4 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    </div>
+                    {targetLanguage === "Custom" && (
+                      <input
+                        type="text"
+                        value={customTargetLang}
+                        onChange={(e) => setCustomTargetLang(e.target.value)}
+                        placeholder="e.g. Russian, Arabic..."
+                        className="mt-2 w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                      />
+                    )}
+                    <p className="text-xs text-gray-400 mt-1">{t.app.targetLanguageHelp}</p>
+                  </div>
+
+                  {/* Prompt Translation / Language Instruction */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">{t.app.promptInstructionLabel}</label>
+                    <input
+                      type="text"
+                      value={promptLanguageInstruction}
+                      onChange={(e) => setPromptLanguageInstruction(e.target.value)}
+                      placeholder={t.app.promptInstructionPlaceholder}
+                      className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    />
+                    <p className="text-xs text-gray-400 mt-1">{t.app.promptInstructionHelp}</p>
+                  </div>
+                </div>
+
                 {/* Models Section */}
                 <div className="space-y-6">
                   {/* API Model Selection */}
@@ -442,7 +547,7 @@ function App() {
         />
       )}
       {previewComplexity && (
-        <PromptModal complexity={previewComplexity} onClose={() => setPreviewComplexity(null)} />
+        <PromptModal complexity={previewComplexity} options={currentGenerationOptions} onClose={() => setPreviewComplexity(null)} />
       )}
       {imageReviewState && (
         <ImageTextReviewModal

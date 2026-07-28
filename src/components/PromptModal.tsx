@@ -1,20 +1,20 @@
 import { X, Copy, Check } from "lucide-react";
 import { useState } from "react";
-import { BASE_JSON_FORMAT, COMPLEXITY_PROMPTS } from "../services/ai";
-import type { QuestionComplexity } from "../types";
+import { buildSystemPrompt } from "../services/ai";
+import type { QuestionComplexity, GenerationOptions } from "../types";
 import { useLanguage } from "../contexts/LanguageContext";
 
 interface PromptModalProps {
   complexity: QuestionComplexity;
+  options?: GenerationOptions;
   onClose: () => void;
 }
 
-export default function PromptModal({ complexity, onClose }: PromptModalProps) {
+export default function PromptModal({ complexity, options, onClose }: PromptModalProps) {
   const { t } = useLanguage();
   const [copied, setCopied] = useState(false);
 
-  const systemPrompt = COMPLEXITY_PROMPTS[complexity] ?? "";
-  const fullPrompt = `${systemPrompt}\n\nStrictly output ONLY a valid JSON object with a "questions" array.\n${BASE_JSON_FORMAT}Ensure you generate 3-5 high-quality questions per chunk of context.`;
+  const fullPrompt = buildSystemPrompt(complexity, options);
   const userMessage = `Generate questions from the following text:\n\n{content}`;
 
   const handleCopy = () => {
@@ -28,6 +28,7 @@ export default function PromptModal({ complexity, onClose }: PromptModalProps) {
     elaborate: t.app.elaborateLabel,
     practical: t.app.practicalLabel,
     "coding problem": t.app.codingLabel,
+    vocabulary: t.app.vocabularyLabel,
     "custom" : t.app.customLabel
   }[complexity] ?? complexity;
 

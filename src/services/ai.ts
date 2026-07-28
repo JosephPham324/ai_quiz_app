@@ -23,14 +23,42 @@ export const COMPLEXITY_PROMPTS: Record<string, string> = {
   elaborate: `You are an expert quiz generator. Analyze the provided text and generate in-depth questions with detailed, longer answer choices. Each multiple-choice option should be a thorough explanation (1-2 sentences each) so the learner gains knowledge even by reading the options. Written answer references should be comprehensive and cover nuances.`,
   practical: `You are an expert quiz generator. Analyze the provided text and generate questions about PRACTICAL APPLICATIONS of the concepts described. Instead of asking what the text says, ask how these concepts would be applied in real-world scenarios, problem-solving situations, or practical use cases (preferably coding scenarios with actual code). Written answer references should describe practical implementations OR direct code examples if the question is code-related or database-related.`,
   "coding problem": `You are an expert technical interviewer. Analyze the provided text and generate coding problems. The questions should describe a scenario and MUST REQUIRE the user to write CODE to solve it. Written answer references must contain the actual correct CODE solution and a brief explanation of how it works.`,
+  vocabulary: `You are an expert language teacher and vocabulary instructor. Analyze the provided text and generate vocabulary-focused questions. Questions should test word definitions, synonyms, antonyms, contextual usage, fill-in-the-blanks, or correct word forms. For multiple choice options, provide plausible distractors to test vocabulary mastery. Written answer references should include clear definitions, parts of speech, and usage examples.`,
 };
 
-function buildSystemPrompt(complexity: string): string {
+export function buildLanguageDirective(options?: GenerationOptions): string {
+  const parts: string[] = [];
+  const qLang = options?.questionLanguage?.trim();
+  const tLang = options?.targetLanguage?.trim();
+  const instruction = options?.promptLanguageInstruction?.trim();
+
+  if (instruction) {
+    parts.push(`LANGUAGE DIRECTIVE: ${instruction}`);
+  } else {
+    if (qLang && qLang !== "Auto") {
+      parts.push(`QUESTION LANGUAGE: All question texts, multiple-choice options, and written answer references MUST be written strictly in ${qLang}.`);
+    }
+    if (tLang && tLang !== "None") {
+      parts.push(`TARGET LEARNING LANGUAGE: The subject/language being learned is ${tLang}. Questions should evaluate knowledge, terms, usage, grammar, or vocabulary of ${tLang}.`);
+    }
+  }
+
+  return parts.join("\n");
+}
+
+export function buildSystemPrompt(complexity: string, options?: GenerationOptions): string {
   const complexityInstruction = COMPLEXITY_PROMPTS[complexity] || COMPLEXITY_PROMPTS.brief;
-  return `${complexityInstruction}
+  const langDirective = buildLanguageDirective(options);
+  const langSection = langDirective ? `\n\n${langDirective}` : "";
+  const langRule = options?.questionLanguage && options.questionLanguage !== "Auto"
+    ? `The question, options, and reference answer language MUST be strictly in ${options.questionLanguage}.`
+    : `The question and answer language must match the language of the input text.`;
+
+  return `${complexityInstruction}${langSection}
 
 Strictly output ONLY a valid JSON object with a "questions" array.
 ${BASE_JSON_FORMAT}
+${langRule}
 Ensure you generate 3-5 high-quality questions per chunk of context.`;
 }
 
@@ -40,8 +68,13 @@ export async function generateQuestionsChunk(text: string, apiKey: string, optio
 
   let messages: { role: string; content: string }[];
 
+  const langDirective = buildLanguageDirective(options);
+
   if (complexity === "custom" && options?.customPrompt) {
-    const customPrompt = options.customPrompt;
+    let customPrompt = options.customPrompt;
+    if (langDirective && !customPrompt.includes(langDirective)) {
+      customPrompt = `${langDirective}\n\n${customPrompt}`;
+    }
     // Always append JSON format instructions ensuring we can parse the output
     const jsonReminder = `\n\nIMPORTANT: Strictly output ONLY a valid JSON object.\n${BASE_JSON_FORMAT}Ensure you generate 3-5 high-quality questions per chunk of context.`;
 
@@ -59,7 +92,7 @@ export async function generateQuestionsChunk(text: string, apiKey: string, optio
       ];
     }
   } else {
-    const systemPrompt = buildSystemPrompt(complexity);
+    const systemPrompt = buildSystemPrompt(complexity, options);
     messages = [
       { role: "system", content: systemPrompt },
       { role: "user", content: `Generate questions from the following text:\n\n${text}` },
