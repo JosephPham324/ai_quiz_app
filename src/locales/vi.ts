@@ -183,5 +183,26 @@ export const vi: Translation = {
     editHint: "Bạn có thể chỉnh sửa để sửa các lỗi nhận diện chữ viết trước khi tạo câu hỏi.",
     download: "Tải về (.txt)",
     useForQuiz: "Sử dụng Để Tạo Câu Hỏi"
+  },
+  sectionSelector: {
+    title: "Chọn Phần Kiến Thức Tạo Câu Hỏi",
+    subtitle: "Chọn các phần hoặc khoảng dòng cụ thể để tạo câu hỏi, tránh bị trùng lặp câu hỏi khi liên tục cập nhật tài liệu.",
+    presetsLabel: "Tùy Chọn Nhanh:",
+    selectAll: "Chọn Toàn Bộ Tài Liệu",
+    selectLast50: "50 Dòng Cuối",
+    selectBottomHalf: "Nửa Dưới (Mới Nhất)",
+    clearAll: "Xóa Tất Cả Lựa Chọn",
+    addRange: "+ Thêm Khoảng Dòng",
+    rangeLabel: "Khoảng",
+    startLine: "Dòng Bắt Đầu",
+    endLine: "Dòng Kết Thúc",
+    removeRange: "Xóa Khoảng",
+    selectedSummary: "Đã chọn:",
+    lines: "dòng",
+    words: "từ",
+    ofTotal: "trên tổng số",
+    clickHint: "Bấm vào bất kỳ dòng nào trong tài liệu để đặt nhanh dòng bắt đầu hoặc kết thúc.",
+    cancel: "Hủy",
+    generateForSelected: "Tạo Câu Hỏi Cho Các Phần Đã Chọn"
   }
 };

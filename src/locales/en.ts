@@ -181,6 +181,27 @@ export const en = {
     editHint: "You can edit the text above to correct any extraction errors before generating questions.",
     download: "Download as .txt",
     useForQuiz: "Use for Quiz Generation"
+  },
+  sectionSelector: {
+    title: "Select Knowledge Sections",
+    subtitle: "Choose specific sections or line ranges to generate questions from, preventing duplicate questions when updating files.",
+    presetsLabel: "Quick Selection Presets:",
+    selectAll: "Select All Document",
+    selectLast50: "Last 50 Lines",
+    selectBottomHalf: "Bottom Half (Newest)",
+    clearAll: "Clear All Selections",
+    addRange: "+ Add Line Range",
+    rangeLabel: "Range",
+    startLine: "Start Line",
+    endLine: "End Line",
+    removeRange: "Remove Range",
+    selectedSummary: "Selected:",
+    lines: "lines",
+    words: "words",
+    ofTotal: "of total",
+    clickHint: "Click any line in the document to quickly set start or end line for a range.",
+    cancel: "Cancel",
+    generateForSelected: "Generate Questions for Selected Sections"
   }
 };
 

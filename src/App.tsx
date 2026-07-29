@@ -7,6 +7,7 @@ import QuizConfigModal from "./components/QuizConfigModal";
 import QuizUI from "./components/QuizUI";
 import PromptModal from "./components/PromptModal";
 import ImageTextReviewModal from "./components/ImageTextReviewModal";
+import SectionSelectorModal from "./components/SectionSelectorModal";
 import type { Question, QuestionComplexity, ModelOption, QuizConfig, GenerationOptions } from "./types";
 import { generateQuestionsChunk, extractTextFromImages, COMPLEXITY_PROMPTS } from "./services/ai";
 import { useLanguage } from "./contexts/LanguageContext";
@@ -134,19 +135,31 @@ function App() {
     }
   };
 
-  const handleContentExtracted = async (content: string, filename: string) => {
+  // Section Selection Modal State
+  const [sectionSelectionState, setSectionSelectionState] = useState<{
+    content: string;
+    filename: string;
+  } | null>(null);
+
+  const handleContentExtracted = (content: string, filename: string) => {
     if (!apiKey) {
       setIsSettingsOpen(true);
       return;
     }
+    // Open Section Selector Modal to choose specific sections/ranges before question generation
+    setSectionSelectionState({ content, filename });
+  };
+
+  const executeQuestionGeneration = async (selectedContent: string, filename: string) => {
+    if (!apiKey || !selectedContent.trim()) return;
 
     setIsGenerating(true);
     setGenerationProgress(0);
 
     const chunkSize = 2000;
     const chunks = [];
-    for (let i = 0; i < content.length; i += chunkSize) {
-      chunks.push(content.substring(i, i + chunkSize));
+    for (let i = 0; i < selectedContent.length; i += chunkSize) {
+      chunks.push(selectedContent.substring(i, i + chunkSize));
     }
 
     const options = currentGenerationOptions;
@@ -164,7 +177,7 @@ function App() {
               sourceFile: filename,
             })),
           );
-          setQuestions([...questions, ...newQuestions]);
+          setQuestions((prev) => [...prev, ...newQuestions]);
           setGenerationProgress(Math.round(((i + 1) / chunks.length) * 100));
         } catch (err) {
           console.error("Failed to generate for chunk", i, err);
@@ -570,6 +583,18 @@ function App() {
           onDownload={handleImageTextDownload}
           onSubmit={handleImageTextSubmit}
           onClose={() => setImageReviewState(null)}
+        />
+      )}
+      {sectionSelectionState && (
+        <SectionSelectorModal
+          filename={sectionSelectionState.filename}
+          fullText={sectionSelectionState.content}
+          onConfirm={(selectedText) => {
+            const fn = sectionSelectionState.filename;
+            setSectionSelectionState(null);
+            executeQuestionGeneration(selectedText, fn);
+          }}
+          onClose={() => setSectionSelectionState(null)}
         />
       )}
     </div>
