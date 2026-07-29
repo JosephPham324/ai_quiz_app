@@ -71,7 +71,24 @@ export const en = {
     clearBank: "Clear Question Bank",
     clearConfirm: "Are you sure you want to clear the question bank?",
     emptyState: "No questions generated yet. Upload a knowledge file to begin.",
-    startQuiz: "Start Quiz"
+    startQuiz: "Start Quiz",
+    editQuestion: "Edit Question",
+    deleteQuestion: "Delete Question",
+    deleteConfirm: "Are you sure you want to delete this question?"
+  },
+  editModal: {
+    title: "Edit Question",
+    questionText: "Question Text",
+    questionType: "Question Type",
+    multipleChoice: "Multiple Choice",
+    written: "Written Answer",
+    options: "Answer Options",
+    correctOption: "Correct Option",
+    optionPlaceholder: "Option",
+    referenceAnswer: "Written Answer Reference",
+    referencePlaceholder: "Enter reference answer for grading...",
+    cancel: "Cancel",
+    save: "Save Changes"
   },
   quizConfig: {
     title: "Quiz Configuration",

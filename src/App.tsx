@@ -236,6 +236,14 @@ function App() {
     );
   }
 
+  const handleDeleteQuestion = (id: string) => {
+    setQuestions((prev) => prev.filter((q) => q.id !== id));
+  };
+
+  const handleUpdateQuestion = (updated: Question) => {
+    setQuestions((prev) => prev.map((q) => (q.id === updated.id ? updated : q)));
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
       <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-10">
@@ -531,6 +539,8 @@ function App() {
                 onImported={(imported) => setQuestions([...questions, ...imported])}
                 onStartQuiz={() => setIsConfigModalOpen(true)}
                 onClear={() => setQuestions([])}
+                onDeleteQuestion={handleDeleteQuestion}
+                onUpdateQuestion={handleUpdateQuestion}
               />
             </div>
           </div>

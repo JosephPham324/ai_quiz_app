@@ -1,8 +1,9 @@
-import React, { useRef, useMemo } from "react";
-import { Download, Upload, List, Trash2, FileText } from "lucide-react";
+import React, { useRef, useMemo, useState } from "react";
+import { Download, Upload, List, Trash2, FileText, Pencil } from "lucide-react";
 import Papa from "papaparse";
 import type { Question } from "../types";
 import { useLanguage } from "../contexts/LanguageContext";
+import EditQuestionModal from "./EditQuestionModal";
 
 const SOURCE_COLORS = [
   { bg: "bg-blue-100", text: "text-blue-700", border: "border-blue-200" },
@@ -20,11 +21,21 @@ interface QuestionBankViewerProps {
   onImported: (questions: Question[], sourceFile: string) => void;
   onStartQuiz: () => void;
   onClear: () => void;
+  onDeleteQuestion?: (id: string) => void;
+  onUpdateQuestion?: (updatedQuestion: Question) => void;
 }
 
-export default function QuestionBankViewer({ questions, onImported, onStartQuiz, onClear }: QuestionBankViewerProps) {
+export default function QuestionBankViewer({
+  questions,
+  onImported,
+  onStartQuiz,
+  onClear,
+  onDeleteQuestion,
+  onUpdateQuestion,
+}: QuestionBankViewerProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { t } = useLanguage();
+  const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
 
   const handleExportCSV = () => {
     if (questions.length === 0) return;
@@ -154,18 +165,40 @@ export default function QuestionBankViewer({ questions, onImported, onStartQuiz,
             {questions.map((q, idx) => {
               const color = q.sourceFile ? colorMap[q.sourceFile] : null;
               return (
-                <div key={q.id} className={`p-3 bg-gray-50 border rounded-lg text-sm ${color ? color.border : "border-gray-100"}`}>
+                <div key={q.id} className={`p-3 bg-gray-50 border rounded-lg text-sm transition-all hover:bg-gray-100/70 ${color ? color.border : "border-gray-100"}`}>
                   <div className="flex items-start justify-between gap-2 mb-2">
-                    <p className="font-medium text-gray-900">
+                    <p className="font-medium text-gray-900 flex-1">
                       {idx + 1}. {q.text}
                     </p>
-                    {q.sourceFile && color && (
-                      <span className={`shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-full ${color.bg} ${color.text}`}>
-                        {q.sourceFile}
-                      </span>
-                    )}
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {q.sourceFile && color && (
+                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${color.bg} ${color.text}`}>
+                          {q.sourceFile}
+                        </span>
+                      )}
+                      <button
+                        onClick={() => setEditingQuestion(q)}
+                        className="p-1 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
+                        title={t.questionBank.editQuestion}
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (window.confirm(t.questionBank.deleteConfirm)) {
+                            onDeleteQuestion?.(q.id);
+                          }
+                        }}
+                        className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                        title={t.questionBank.deleteQuestion}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
-                  <div className="text-gray-500 line-clamp-2">{q.type === "multiple-choice" ? q.options?.join(" • ") : q.writtenAnswerReference}</div>
+                  <div className="text-gray-500 line-clamp-2">
+                    {q.type === "multiple-choice" ? q.options?.join(" • ") : q.writtenAnswerReference}
+                  </div>
                 </div>
               );
             })}
@@ -179,6 +212,17 @@ export default function QuestionBankViewer({ questions, onImported, onStartQuiz,
             </button>
           </div>
         </div>
+      )}
+
+      {editingQuestion && (
+        <EditQuestionModal
+          question={editingQuestion}
+          onSave={(updated) => {
+            onUpdateQuestion?.(updated);
+            setEditingQuestion(null);
+          }}
+          onClose={() => setEditingQuestion(null)}
+        />
       )}
     </div>
   );

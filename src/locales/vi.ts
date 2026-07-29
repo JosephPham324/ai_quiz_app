@@ -73,7 +73,24 @@ export const vi: Translation = {
     clearBank: "Xóa Ngân Hàng Câu Hỏi",
     clearConfirm: "Bạn có chắc chắn muốn xóa ngân hàng câu hỏi không?",
     emptyState: "Chưa có câu hỏi nào được tạo. Hãy tải lên một tệp kiến thức để bắt đầu.",
-    startQuiz: "Bắt Đầu Quiz"
+    startQuiz: "Bắt Đầu Quiz",
+    editQuestion: "Chỉnh Sửa Câu Hỏi",
+    deleteQuestion: "Xóa Câu Hỏi",
+    deleteConfirm: "Bạn có chắc chắn muốn xóa câu hỏi này không?"
+  },
+  editModal: {
+    title: "Chỉnh Sửa Câu Hỏi",
+    questionText: "Nội Dung Câu Hỏi",
+    questionType: "Loại Câu Hỏi",
+    multipleChoice: "Trắc Nghiệm",
+    written: "Tự Luận",
+    options: "Các Lựa Chọn Câu Trả Lời",
+    correctOption: "Đáp Án Đúng",
+    optionPlaceholder: "Lựa chọn",
+    referenceAnswer: "Câu Trả Lời Tham Khảo",
+    referencePlaceholder: "Nhập câu trả lời tham khảo để chấm điểm...",
+    cancel: "Hủy",
+    save: "Lưu Thay Đổi"
   },
   quizConfig: {
     title: "Cấu Hình Quiz",
