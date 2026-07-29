@@ -12,10 +12,12 @@
   "dependencies": {
     "@tailwindcss/typography": "^0.5.19",
     "@tailwindcss/vite": "^4.2.1",
+    "docx": "^9.7.1",
     "lucide-react": "^0.577.0",
     "mammoth": "^1.11.0",
-    "pdfjs-dist": "^4.9.155",
     "papaparse": "^5.5.3",
+    "pdfjs-dist": "^4.9.155",
+    "puppeteer-core": "^24.43.1",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-markdown": "^10.1.0",

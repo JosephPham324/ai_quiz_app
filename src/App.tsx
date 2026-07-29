@@ -82,6 +82,13 @@ function App() {
   } | null>(null);
 
   useEffect(() => {
+    (window as any).__DEV_SET_STATE = {
+      setQuestions,
+      setSectionSelectionState,
+      setIsConfigModalOpen,
+      setQuizMode,
+      setActiveQuizQuestions,
+    };
     const key = localStorage.getItem("openai_api_key");
     if (key) {
       setApiKey(key);
@@ -265,13 +272,23 @@ function App() {
             <BookOpen className="w-6 h-6 text-indigo-600" />
             <h1 className="text-xl font-bold text-gray-900 tracking-tight">{t.app.title}</h1>
           </div>
-          <button
-            onClick={() => setIsSettingsOpen(true)}
-            className="p-2 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors"
-            title="Settings"
-          >
-            <Settings className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            <a
+              href="./docs.html"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 rounded-lg transition-colors"
+              title="Open Documentation Site"
+            >
+              <BookOpen className="w-4 h-4 text-indigo-600" />
+              Docs
+            </a>
+            <button
+              onClick={() => setIsSettingsOpen(true)}
+              className="p-2 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors"
+              title="Settings"
+            >
+              <Settings className="w-5 h-5" />
+            </button>
+          </div>
         </div>
       </header>
 
